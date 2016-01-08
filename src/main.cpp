@@ -62,12 +62,16 @@
 #define dfu_enable_checksum  CHECKSUM("dfu_enable")
 #define watchdog_timeout_checksum  CHECKSUM("watchdog_timeout")
 
-
-// USB Stuff
+// SD card
+#ifdef COMPILE_FOR_FABBSTER
+SDCard sd  __attribute__ ((section ("AHBSRAM0"))) (P0_18, P0_17, P0_15, P0_16);  // this selects SPI0 as the sdcard as it is on the fabbster board
+#else
 SDCard sd  __attribute__ ((section ("AHBSRAM0"))) (P0_9, P0_8, P0_7, P0_6);      // this selects SPI1 as the sdcard as it is on Smoothieboard
 //SDCard sd(P0_18, P0_17, P0_15, P0_16);  // this selects SPI0 as the sdcard
-//SDCard sd(P0_18, P0_17, P0_15, P2_8);  // this selects SPI0 as the sdcard witrh a different sd select
+//SDCard sd(P0_18, P0_17, P0_15, P2_8);  // this selects SPI0 as the sdcard with a different sd select
+#endif
 
+// USB Stuff
 USB u __attribute__ ((section ("AHBSRAM0")));
 USBSerial usbserial __attribute__ ((section ("AHBSRAM0"))) (&u);
 #ifndef DISABLEMSD
