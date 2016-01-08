@@ -58,6 +58,18 @@ ifneq "$(STEPTICKER_DEBUG_PIN)" ""
 DEFINES += -DSTEPTICKER_DEBUG_PIN=$(STEPTICKER_DEBUG_PIN)
 endif
 
+# Set to 1 to compile a firmware for the fabbster 3D printer. The fabbster 3D
+# printer was discontinued mid 2015. The CPU board is somewhat similar to the
+# Smoothieboard, but uses some shift register multiplexed I/O. grep for 
+# COMPILE_FOR_FABBSTER to find the #ifdefs in the code and the files that were 
+# added specifically for this printer board. Also see http://wiki.fabbster.com/Main_Page.
+#
+# example make call: make COMPILE_FOR_FABBSTER=1 all
+#
+ifneq "$(COMPILE_FOR_FABBSTER)" ""
+DEFINES += -DCOMPILE_FOR_FABBSTER
+endif
+
 # add any modules that you do not want included in the build
 EXCLUDE_MODULES = tools/touchprobe
 # e.g for a CNC machine
