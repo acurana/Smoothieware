@@ -82,6 +82,12 @@
 #define  acceleration_checksum               CHECKSUM("acceleration")
 #define  z_acceleration_checksum             CHECKSUM("z_acceleration")
 
+// the fabbster motor driver board has additional pins to set microstepping
+#define  m1_pin_checksum                     CHECKSUM("m1_pin")
+#define  m2_pin_checksum                     CHECKSUM("m2_pin")
+#define  m3_pin_checksum                     CHECKSUM("m3_pin")
+#define  microsteps_checksum                 CHECKSUM("microsteps")
+
 #define  alpha_checksum                      CHECKSUM("alpha")
 #define  beta_checksum                       CHECKSUM("beta")
 #define  gamma_checksum                      CHECKSUM("gamma")
@@ -106,7 +112,7 @@
 // The Robot converts GCodes into actual movements, and then adds them to the Planner, which passes them to the Conveyor so they can be added to the queue
 // It takes care of cutting arcs into segments, same thing for line that are too long
 
-const size_t Robot::k_max_wcs; // a static member requires definition
+//const size_t Robot::k_max_wcs; // a static member requires definition
 
 Robot::Robot()
 {
@@ -145,6 +151,9 @@ void Robot::on_module_loaded()
     CHECKSUM(X "_steps_per_mm"),    \
     CHECKSUM(X "_max_rate"),        \
     CHECKSUM(X "_acceleration")     \
+    CHECKSUM(X "_m1_pin"),          \
+    CHECKSUM(X "_m2_pin"),          \
+    CHECKSUM(X "_m3_pin"),          \
 }
 
 void Robot::load_config()
@@ -235,6 +244,17 @@ void Robot::load_config()
         for (size_t i = 0; i < 3; i++) {
             pins[i].from_string(THEKERNEL->config->value(motor_checksums[a][i])->by_default("nc")->as_string())->as_output();
         }
+        // fabbster micro stepping pins
+        Pin pinsm[3]; // m1, m2, m3 for fabbster
+        for (size_t i = 0; i < 3; i++) { // pins[5]=m1, pins[6]=m2, pins[7]=m3,
+            pinsm[i].from_string(THEKERNEL->config->value(checksums[a][i+5])->by_default("nc")->as_string())->as_output();
+        }
+        // set 16 microsteps on fabbster by default, see THB7128 datasheet
+        pinsm[0].set(0); // @todo
+        pinsm[1].set(0);
+        pinsm[2].set(1);
+
+        actuators[a] = new StepperMotor(pins[0], pins[1], pins[2]);
 
         if(!pins[0].connected() || !pins[1].connected()) { // step and dir must be defined, but enable is optional
             if(a <= Z_AXIS) {
