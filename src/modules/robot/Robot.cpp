@@ -72,6 +72,12 @@ using std::string;
 #define  dir_pin_checksum                    CHEKCSUM("dir_pin")
 #define  en_pin_checksum                     CHECKSUM("en_pin")
 
+// the fabbster motor driver board has additional pins to set microstepping
+#define  m1_pin_checksum                     CHECKSUM("m1_pin")
+#define  m2_pin_checksum                     CHECKSUM("m2_pin")
+#define  m3_pin_checksum                     CHECKSUM("m3_pin")
+#define  microsteps_checksum                 CHECKSUM("microsteps")
+
 #define  steps_per_mm_checksum               CHECKSUM("steps_per_mm")
 #define  max_rate_checksum                   CHECKSUM("max_rate")
 
@@ -105,7 +111,7 @@ using std::string;
 // The Robot converts GCodes into actual movements, and then adds them to the Planner, which passes them to the Conveyor so they can be added to the queue
 // It takes care of cutting arcs into segments, same thing for line that are too long
 
-const size_t Robot::k_max_wcs; // a static member requires definition
+//const size_t Robot::k_max_wcs; // a static member requires definition
 
 Robot::Robot()
 {
@@ -138,7 +144,10 @@ void Robot::on_module_loaded()
     CHECKSUM(X "_dir_pin"),         \
     CHECKSUM(X "_en_pin"),          \
     CHECKSUM(X "_steps_per_mm"),    \
-    CHECKSUM(X "_max_rate")         \
+    CHECKSUM(X "_max_rate"),        \
+    CHECKSUM(X "_m1_pin"),          \
+    CHECKSUM(X "_m2_pin"),          \
+    CHECKSUM(X "_m3_pin"),          \
 }
 
 void Robot::load_config()
@@ -187,7 +196,7 @@ void Robot::load_config()
     this->max_speeds[Z_AXIS]  = THEKERNEL->config->value(z_axis_max_speed_checksum    )->by_default(  300.0F)->as_number() / 60.0F;
 
     // Make our 3 StepperMotors
-    uint16_t const checksums[][5] = {
+    uint16_t const checksums[][8] = {
         ACTUATOR_CHECKSUMS("alpha"),
         ACTUATOR_CHECKSUMS("beta"),
         ACTUATOR_CHECKSUMS("gamma"),
@@ -206,6 +215,16 @@ void Robot::load_config()
         for (size_t i = 0; i < 3; i++) {
             pins[i].from_string(THEKERNEL->config->value(checksums[a][i])->by_default("nc")->as_string())->as_output();
         }
+        // fabbster micro stepping pins
+        Pin pinsm[3]; // m1, m2, m3 for fabbster
+        for (size_t i = 0; i < 3; i++) { // pins[5]=m1, pins[6]=m2, pins[7]=m3,
+            pinsm[i].from_string(THEKERNEL->config->value(checksums[a][i+5])->by_default("nc")->as_string())->as_output();
+        }
+        // set 16 microsteps on fabbster by default, see THB7128 datasheet
+        pinsm[0].set(0); // @todo
+        pinsm[1].set(0);
+        pinsm[2].set(1);
+
         actuators[a] = new StepperMotor(pins[0], pins[1], pins[2]);
 
         actuators[a]->change_steps_per_mm(THEKERNEL->config->value(checksums[a][3])->by_default(a == 2 ? 2560.0F : 80.0F)->as_number());
@@ -321,7 +340,7 @@ void Robot::check_max_actuator_speeds()
         float step_freq = actuators[i]->get_max_rate() * actuators[i]->get_steps_per_mm();
         if (step_freq > THEKERNEL->base_stepping_frequency) {
             actuators[i]->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / actuators[i]->get_steps_per_mm()));
-            THEKERNEL->streams->printf("WARNING: actuator %c rate exceeds base_stepping_frequency * alpha_steps_per_mm: %f, setting to %f\n", 'A' + i, step_freq, actuators[i]->max_rate);
+            THEKERNEL->streams->printf("WARNING: actuator %c rate exceeds base_stepping_frequency * alpha_steps_per_mm: %f, setting to %f\r\n", 'A' + i, step_freq, actuators[i]->max_rate);
         }
     }
 }
