@@ -97,10 +97,13 @@ GPIO leds[5] = {
 void init() {
 
     // Default pins to low status
+    // this collides with the serial pins on fabbster
+#ifndef COMPILE_FOR_FABBSTER
     for (int i = 0; i < 5; i++){
         leds[i].output();
         leds[i]= 0;
     }
+#endif
 
     Kernel* kernel = new Kernel();
 
@@ -214,13 +217,13 @@ void init() {
     }
 
     // 10 second watchdog timeout (or config as seconds)
-    float t= kernel->config->value( watchdog_timeout_checksum )->by_default(10.0F)->as_number();
+    float t= kernel->config->value( watchdog_timeout_checksum )->by_default(/*10.0F*/0.0F)->as_number(); // chris debug
     if(t > 0.1F) {
         // NOTE setting WDT_RESET with the current bootloader would leave it in DFU mode which would be suboptimal
         kernel->add_module( new Watchdog(t*1000000, WDT_MRI)); // WDT_RESET));
-        kernel->streams->printf("Watchdog enabled for %f seconds\n", t);
+        kernel->streams->printf("Watchdog enabled for %f seconds\r\n", t);
     }else{
-        kernel->streams->printf("WARNING Watchdog is disabled\n");
+        kernel->streams->printf("WARNING Watchdog is disabled\r\n");
     }
 
 
