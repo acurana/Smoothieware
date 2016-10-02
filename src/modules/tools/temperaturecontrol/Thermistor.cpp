@@ -306,8 +306,11 @@ float Thermistor::adc_value_to_temperature(uint32_t adc_value)
 
 int Thermistor::new_thermistor_reading()
 {
-    // filtering now done in ADC
-    return THEKERNEL->adc->read(&thermistor_pin);
+    if(thermistor_pin.is_multiplexed())
+        return THEKERNEL->adc->read_mpx(&thermistor_pin);
+    else
+        // filtering now done in ADC
+        return THEKERNEL->adc->read(&thermistor_pin);
 }
 
 bool Thermistor::set_optional(const sensor_options_t& options) {
