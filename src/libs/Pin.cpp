@@ -7,9 +7,22 @@
 #include "PinNames.h"
 #include "port_api.h"
 
-Pin::Pin(){
+#include "PublicData.h"
+#include "Multiplexer.h"
+#include "MpxContainer.h"
+#include "MpxContainerPublicAccess.h"
+
+// chris debug
+#include "libs/Kernel.h"
+#include "StreamOutputPool.h"
+
+
+Pin::Pin()
+    : mpx(NULL), idx(0), adc_ch(0xffff)
+{
     this->inverting= false;
     this->valid= false;
+    multiplexed = false;
     this->pin= 32;
     this->port= nullptr;
 }
@@ -73,6 +86,9 @@ Pin* Pin::from_string(std::string value){
                             break;
                         case '@':
                             as_repeater();
+                            break;
+                        case 'm': // pin is multiplexed
+                            multiplexed_pin(cn);
                             break;
                         default:
                             // skip any whitespace following the pin index
@@ -208,3 +224,144 @@ mbed::InterruptIn* Pin::interrupt_pin()
         return nullptr;
     }
 }
+
+/*
+ * If a pin is multiplexed we expect cp to point to the 'm' modifier.
+ * after that we expect a dot, then exactly two integers with a dot inbetween.
+ * 1st integer is the identifier of the multiplexer, then the dot, then the
+ * 2nd integer which is the index within the multiplexer.
+ *
+ * Example:
+ *
+ *     2.2m.1.7 (Port 2, Pin2, multiplexed, mpx type/id 1, mpx line 7
+ * or
+ *     2.2om.3.7 (Port 2, Pin2, open drain, multiplexed, mpx type/id 3, mpx line 7
+ */
+void Pin::multiplexed_pin(char const* cp)
+{
+    unsigned mpx_id, mpx_idx;
+    int err = 0;
+    mpx_map_t* mm;
+
+    for ( ; ; ) // poor man's exception handling
+    {
+        if (! PublicData::get_value(multiplexer_checksum, &mm )) // get ptr to mpx map
+            { err = 0x01; break; }  // cannot get public data
+
+        int res = sscanf(cp, "m.%d.%d", &mpx_id, &mpx_idx); // cost: 32 bytes in -O 0
+
+        if (res != 2 ||                                 // invalid number of values
+            (mpx_id < 1 || mpx_id > mm->size()))        // id out of range
+            { err = 0x02; break; }  // parse error
+
+        char key[4]; // to_string and stoi are not available
+        snprintf(key, 4, "m%d", mpx_id); // key are m1, m2, m3,...
+
+        /*
+         * ok, now we can assign a proper multiplexer and index to the pin
+         */
+        mpx_map_t::iterator it;
+        it = mm->find(key); // find corresponding multiplexer in map
+
+        if (it == mm->end())
+            { err = 0x03; break; }  // mpx not found
+
+        unsigned num_chan = (*it).second->get_channels();
+        if (mpx_idx >= num_chan)
+            { err = 0x04; break; }  // channel index out of range
+
+        mpx = (*it).second.get();   // assign the multiplexer
+        idx = mpx_idx;              // assign the index within the mpx
+
+        // enable multiplexer channel
+        mpx->set_active((Multiplexer::active_channel_t)(0x01 << idx));
+
+        // chris debug remove @todo
+        THEKERNEL->streams->printf("assigned multiplexer m%d.%d (%p) to pin P%d_%d\r\n", mpx_id, mpx_idx, mpx, port_number, pin);
+
+        multiplexed = true;
+        break;
+    }
+    if (err) {
+        valid = false; // valid was set true in from_string(...)
+        THEKERNEL->streams->printf("ERROR:unable to assign mpx %s to pin, error code %d\r\n", cp, err);
+    }
+}
+
+/*
+ * special getter for the multiplexed case
+ * measured with scope: approx. 14usec until pin is read, mpx index 7
+ */
+bool Pin::get_multiplexed(void)
+{
+    mpx->set_index(idx);    // store new index in multiplexer
+    mpx->apply_index();     // make multiplexed data present at (input) pin
+
+    return inverting ^ (( port->FIOPIN >> pin ) & 1);
+}
+
+/*
+ * special setter for the multiplexed case
+ */
+void Pin::set_multiplexed(bool value)
+{
+    mpx->set_index(idx);    // store new index in multiplexer
+
+    if ( this->inverting ^ value )
+        mpx->set_data(true);
+    else
+        mpx->set_data(false);
+
+    mpx->apply_index();     // make multiplexed data present at (multiplexer) output pin
+}
+
+
+uint8_t Pin::get_mpx_index(void)
+{
+    return idx;
+}
+
+
+//void Pin::set_mpx_index(uint8_t i)
+//{
+//    idx = i;
+//}
+
+
+// @todo remove
+//void Pin::set_mpx_channel(void)
+//{
+//    mpx->set_index(idx);    // set multiplexer index to this pin's index
+//    mpx->apply_index();     // apply this index in hardware
+//}
+
+
+bool Pin::is_multiplexed(void)
+{
+    return multiplexed;
+}
+
+
+//unsigned Pin::get_mpx_num_chan(void)
+//{
+//    return mpx->get_channels();
+//}
+
+
+uint16_t Pin::get_adc_ch(void)
+{
+    return adc_ch;
+}
+
+
+void Pin::set_adc_ch(uint16_t ch)
+{
+    adc_ch = ch;
+}
+
+
+Multiplexer* Pin::get_mpx_ptr(void)
+{
+    return mpx;
+}
+
