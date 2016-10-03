@@ -47,6 +47,14 @@
 
 #include "mbed.h" // for wait_ms()
 
+
+// chris debug @todo
+#include "PublicData.h"
+#include "Multiplexer.h"
+#include "MpxContainer.h"
+#include "MpxContainerPublicAccess.h"
+
+
 extern unsigned int g_maximumHeapAddress;
 
 #include <malloc.h>
@@ -89,6 +97,8 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"thermistors", SimpleShell::print_thermistors_command},
     {"md5sum",   SimpleShell::md5sum_command},
     {"test",     SimpleShell::test_command},
+
+    {"tf",       SimpleShell::test_fabbster_command},
 
     // unknown command
     {NULL, NULL}
@@ -1433,6 +1443,51 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         if(send_ok) stream->printf("ok\n");
     }
 }
+
+void SimpleShell::test_fabbster_command( string parameters, StreamOutput *stream )
+{
+    string item = shift_parameter( parameters );
+    string number = shift_parameter( parameters );
+
+    int num = strtod(number.c_str(), NULL);
+
+    stream->printf("number: %d\r\n", num);
+
+    mpx_map_t* mm;
+
+    int err;
+
+    Pin pin;
+    pin.from_string("2.0m.4.7");
+
+    for ( ; ; ) // poor man's exception handling
+    {
+        if (! PublicData::get_value(multiplexer_checksum, &mm )) // get ptr to mpx map
+            { err = 0x01; break; }  // cannot get public data
+
+        int siz = mm->size();
+        stream->printf("size of map: %d\r\n", siz);
+
+
+        std::unique_ptr < Multiplexer >& un_ptr_ref = (*mm)["m2"];
+
+        stream->printf("channels: %d\r\n", un_ptr_ref->get_channels());
+        stream->printf("index:    %d\r\n",  un_ptr_ref->get_index());
+
+        int x = pin.get();
+
+        //stream->printf("# of channles: %d\r\n", mp->get_channels());
+        stream->printf("pin: %d\r\n",  x);
+
+        int a = 7;
+
+        break;
+    }
+
+//    if (item == "mpx1") { // multiplexer 1: (m.1), 4051
+//    }
+}
+
 
 void SimpleShell::help_command( string parameters, StreamOutput *stream )
 {

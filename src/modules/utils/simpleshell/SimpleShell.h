@@ -64,6 +64,7 @@ private:
     static void remount_command( string parameters, StreamOutput *stream);
 
     static void test_command( string parameters, StreamOutput *stream);
+    static void test_fabbster_command( string parameters, StreamOutput *stream );
 
     typedef void (*PFUNC)(string parameters, StreamOutput *stream);
     typedef struct {
