@@ -56,6 +56,7 @@ class TemperatureControl : public Module {
         float last_reading;
         float readings_per_second;
         Pwm  heater_pin;
+        Pwm  heater_pin2;
 
         std::string designator;
 
