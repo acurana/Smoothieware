@@ -145,14 +145,20 @@ int ADC::_pin_to_channel(PinName pin) {
         case p20://=p1.31 of LPC1768
             chan=5;
             break;
+        case P0_2: // fabbster LM35 temp. sens.
+            chan=7;
+            break;
+        case P0_3: // fabbster 8 x multiplexed temp/analogue in
+            chan=6;
+            break;
     }
     return(chan);
 }
 
 PinName ADC::channel_to_pin(int chan) {
-    const PinName pin[8]={p15, p16, p17, p18, p19, p20, p15, p15};
+    const PinName pin[8]={p15, p16, p17, p18, p19, p20, P0_3, P0_2}; // added ch 6+7 for fabbster
 
-    if ((chan < 0) || (chan > 5))
+    if ((chan < 0) || (chan > 7))
         fprintf(stderr, "ADC channel %u is outside range available to MBED pins.\n", chan);
     return(pin[chan & 0x07]);
 }
@@ -161,7 +167,7 @@ PinName ADC::channel_to_pin(int chan) {
 int ADC::channel_to_pin_number(int chan) {
     const int pin[8]={15, 16, 17, 18, 19, 20, 0, 0};
 
-    if ((chan < 0) || (chan > 5))
+    if ((chan < 0) || (chan > 7))
         fprintf(stderr, "ADC channel %u is outside range available to MBED pins.\n", chan);
     return(pin[chan & 0x07]);
 }
@@ -235,6 +241,20 @@ void ADC::setup(PinName pin, int state) {
                 LPC_PINCON->PINMODE3 &= ~((unsigned int)0x3 << 30);
                 LPC_PINCON->PINMODE3 |= (unsigned int)0x2 << 30;
                break;
+
+            case P0_3: // fabbster
+                LPC_PINCON->PINSEL0 &= ~((unsigned int)0x3 << 6);
+                LPC_PINCON->PINSEL0 |= (unsigned int)0x2 << 6;
+                LPC_PINCON->PINMODE0 &= ~((unsigned int)0x3 << 6);
+                LPC_PINCON->PINMODE0 |= (unsigned int)0x2 << 6;
+               break;
+            case P0_2: // fabbster
+                LPC_PINCON->PINSEL0 &= ~((unsigned int)0x3 << 4);
+                LPC_PINCON->PINSEL0 |= (unsigned int)0x2 << 4;
+                LPC_PINCON->PINMODE0 &= ~((unsigned int)0x3 << 4);
+                LPC_PINCON->PINMODE0 |= (unsigned int)0x2 << 4;
+               break;
+
         }
         //Only one channel can be selected at a time if not in burst mode
         if (!burst()) LPC_ADC->ADCR &= ~0xFF;
@@ -268,6 +288,16 @@ void ADC::setup(PinName pin, int state) {
                 LPC_PINCON->PINSEL3 &= ~((unsigned int)0x3 << 30);
                 LPC_PINCON->PINMODE3 &= ~((unsigned int)0x3 << 30);
                 break;
+
+            case P0_3: // fabbster
+                LPC_PINCON->PINSEL0 &= ~((unsigned int)0x3 << 6);
+                LPC_PINCON->PINMODE0 &= ~((unsigned int)0x3 << 6);
+                break;
+            case P0_2: // fabbster
+                LPC_PINCON->PINSEL0 &= ~((unsigned int)0x3 << 4);
+                LPC_PINCON->PINMODE0 &= ~((unsigned int)0x3 << 4);
+                break;
+
         }
         LPC_ADC->ADCR &= ~(1 << chan);
     }
