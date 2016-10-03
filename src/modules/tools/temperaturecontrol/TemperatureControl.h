@@ -60,6 +60,7 @@ class TemperatureControl : public Module {
         uint16_t name_checksum;
 
         Pwm  heater_pin;
+        Pwm  heater_pin2;
 
         uint16_t set_m_code;
         uint16_t set_and_wait_m_code;

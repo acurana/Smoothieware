@@ -32,6 +32,7 @@
 #include "Thermistor.h"
 #include "max31855.h"
 #include "AD8495.h"
+#include "Thermocouple.h"
 
 #include "MRI_Hooks.h"
 
@@ -45,6 +46,7 @@
 #define bang_bang_checksum                 CHECKSUM("bang_bang")
 #define hysteresis_checksum                CHECKSUM("hysteresis")
 #define heater_pin_checksum                CHECKSUM("heater_pin")
+#define heater_pin2_checksum               CHECKSUM("heater_pin2")
 #define max_temp_checksum                  CHECKSUM("max_temp")
 #define min_temp_checksum                  CHECKSUM("min_temp")
 
@@ -107,6 +109,7 @@ void TemperatureControl::on_halt(void *arg)
         // turn off heater
         this->o = 0;
         this->heater_pin.set(0);
+        this->heater_pin2.set(0);
         this->target_temperature = UNDEFINED;
     }
 }
@@ -139,9 +142,11 @@ void TemperatureControl::load_config()
 
     // Heater pin
     this->heater_pin.from_string( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, heater_pin_checksum)->by_default("nc")->as_string());
+    this->heater_pin2.from_string( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, heater_pin2_checksum)->by_default("nc")->as_string());
     if(this->heater_pin.connected()){
         this->readonly= false;
         this->heater_pin.as_output();
+        this->heater_pin2.as_output();
 
     } else {
         this->readonly= true;
@@ -159,6 +164,8 @@ void TemperatureControl::load_config()
         sensor = new Max31855();
     } else if(sensor_type.compare("ad8495") == 0) {
         sensor = new AD8495();
+    } else if (sensor_type.compare("th_cp_k_amp_200") == 0) {
+        sensor = new Thermocouple();
     } else {
         sensor = new TempSensor(); // A dummy implementation
     }
@@ -178,6 +185,7 @@ void TemperatureControl::load_config()
         this->windup = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, windup_checksum)->by_default(false)->as_bool();
         this->heater_pin.max_pwm( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, max_pwm_checksum)->by_default(255)->as_number() );
         this->heater_pin.set(0);
+        this->heater_pin2.set(0);
         set_low_on_debug(heater_pin.port_number, heater_pin.pin);
         // activate SD-DAC timer
         THEKERNEL->slow_ticker->attach( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, pwm_frequency_checksum)->by_default(2000)->as_number(), &heater_pin, &Pwm::on_tick);
@@ -272,8 +280,10 @@ void TemperatureControl::on_gcode_received(void *argument)
                     setPIDd( gcode->get_value('D') );
                 if (gcode->has_letter('X'))
                     this->i_max = gcode->get_value('X');
-                if (gcode->has_letter('Y'))
+                if (gcode->has_letter('Y')) {
                     this->heater_pin.max_pwm(gcode->get_value('Y'));
+                    this->heater_pin2.max_pwm(gcode->get_value('Y'));
+                }
 
             }else if(!gcode->has_letter('S')) {
                 gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g max pwm: %d O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor / this->PIDdt, this->d_factor * this->PIDdt, this->i_max, this->heater_pin.max_pwm(), o);
@@ -318,6 +328,7 @@ void TemperatureControl::on_gcode_received(void *argument)
                 if (v == 0.0) {
                     this->target_temperature = UNDEFINED;
                     this->heater_pin.set((this->o = 0));
+                    this->heater_pin2.set((this->o = 0));
                 } else {
                     this->set_desired_temperature(v);
                     // wait for temp to be reached, no more gcodes will be fetched until this is complete
@@ -424,6 +435,7 @@ void TemperatureControl::set_desired_temperature(float desired_temperature)
     if (desired_temperature <= 0.0F){
         // turning it off
         heater_pin.set((this->o = 0));
+        heater_pin2.set((this->o = 0));
 
     }else if(last_target_temperature <= 0.0F) {
         // if it was off and we are now turning it on we need to initialize
@@ -448,6 +460,7 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy)
             this->temp_violated = true;
             target_temperature = UNDEFINED;
             heater_pin.set((this->o = 0));
+            heater_pin2.set((this->o = 0));
         } else {
             pid_process(temperature);
         }
@@ -467,16 +480,19 @@ void TemperatureControl::pid_process(float temperature)
         // good for relays
         if(temperature > (target_temperature + hysteresis) && this->o > 0) {
             heater_pin.set(false);
+            heater_pin2.set(false);
             this->o = 0; // for display purposes only
 
         } else if(temperature < (target_temperature - hysteresis) && this->o <= 0) {
             if(heater_pin.max_pwm() >= 255) {
                 // turn on full
                 this->heater_pin.set(true);
+                this->heater_pin2.set(true);
                 this->o = 255; // for display purposes only
             } else {
                 // only to whatever max pwm is configured
                 this->heater_pin.pwm(heater_pin.max_pwm());
+                this->heater_pin2.pwm(heater_pin.max_pwm());
                 this->o = heater_pin.max_pwm(); // for display purposes only
             }
         }
@@ -505,6 +521,7 @@ void TemperatureControl::pid_process(float temperature)
         this->iTerm = new_I; // Only update I term when output is not saturated.
 
     this->heater_pin.pwm(this->o);
+    this->heater_pin2.pwm(this->o);
     this->lastInput = temperature;
 }
 
