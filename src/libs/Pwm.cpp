@@ -2,16 +2,27 @@
 
 #include "nuts_bolts.h"
 
+// mbed libraries for hardware pwm
+#include "PwmOut.h"
+
 #define PID_PWM_MAX 256
 
 // What ?
 
 Pwm::Pwm()
+    : hw_pwm(NULL)
 {
     _max = PID_PWM_MAX - 1;
     _pwm = -1;
     _sd_direction= false;
     _sd_accumulator= 0;
+}
+
+Pwm::Pwm(bool hwpwm)
+    : Pwm()
+{
+    if (hwpwm)
+        hw_pwm = hardware_pwm();
 }
 
 void Pwm::pwm(int new_pwm)
@@ -39,6 +50,11 @@ void Pwm::set(bool value)
 
 uint32_t Pwm::on_tick(uint32_t dummy)
 {
+    if(hw_pwm) {
+        hw_pwm->write((float)_pwm / (float)_max);   // use hw pwm if ptr is set
+        return dummy;
+    }
+
     if ((_pwm < 0) || _pwm >= PID_PWM_MAX) {
         return dummy;
     }
