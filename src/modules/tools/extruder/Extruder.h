@@ -44,6 +44,11 @@ class Extruder : public Tool {
         Pin            step_pin;                     // Step pin for the stepper driver
         Pin            dir_pin;                      // Dir pin for the stepper driver
         Pin            en_pin;
+
+        Pin            m1_pin;
+        Pin            m2_pin;
+        Pin            m3_pin;
+
         float          target_position;              // End point ( in mm ) for the current move
         float          unstepped_distance;           // overflow buffer for requested moves that are less than 1 step
         Block*         current_block;                // Current block we are stepping, same as Stepper's one
