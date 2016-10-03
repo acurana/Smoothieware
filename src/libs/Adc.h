@@ -11,10 +11,11 @@
 #define ADC_H
 
 #include "PinNames.h" // mbed.h lib
-
 #include <cmath>
 
 class Pin;
+class Multiplexer;
+
 namespace mbed {
     class ADC;
 }
@@ -29,6 +30,7 @@ public:
     Adc();
     void enable_pin(Pin *pin);
     unsigned int read(Pin *pin);
+    uint16_t read_mpx (Pin *pin);
 
     static Adc *instance;
     void new_sample(int chan, uint32_t value);
@@ -43,7 +45,7 @@ private:
     PinName _pin_to_pinname(Pin *pin);
     mbed::ADC *adc;
 
-    static const int num_channels= 6;
+    static const int num_channels = 8; // need channels 6+7 for fabbster
 #ifdef OVERSAMPLE
     // we need 4^n sample to oversample and we get double that to filter out spikes
     static const int num_samples= powf(4, OVERSAMPLE)*2;
@@ -52,6 +54,10 @@ private:
 #endif
     // buffers storing the last num_samples readings for each channel
     uint16_t sample_buffers[num_channels][num_samples];
+
+    // multiplexer from Pin is stored here
+    Multiplexer* mpxer[num_channels];
 };
 
 #endif
+

@@ -12,11 +12,15 @@
 #include "libs/ADC/adc.h"
 #include "libs/Pin.h"
 #include "libs/Median.h"
+#include "AdcFilter.h"
 
 #include <cstring>
 #include <algorithm>
 
 #include "mbed.h"
+
+#include "Multiplexer.h"
+#include <cassert>
 
 // This is an interface to the mbed.org ADC library you can find in libs/ADC/adc.h
 // TODO : Having the same name is confusing, should change that
@@ -31,6 +35,10 @@ static void sample_isr(int chan, uint32_t value)
 Adc::Adc()
 {
     instance = this;
+
+    // clear mpx ptrs
+    memset (mpxer, 0, sizeof(mpxer));
+
     // ADC sample rate need to be fast enough to be able to read the enabled channels within the thermistor poll time
     // even though ther maybe 32 samples we only need one new one within the polling time
     const uint32_t sample_rate= 1000; // 1KHz sample rate
@@ -59,6 +67,30 @@ void Adc::enable_pin(Pin *pin)
     int channel = adc->_pin_to_channel(pin_name);
     memset(sample_buffers[channel], 0, sizeof(sample_buffers[0]));
 
+    if (pin->is_multiplexed()) {
+
+        // store the ADC channel in the Pin
+        pin->set_adc_ch(channel);
+
+        // get multiplexer ptr from Pin
+        Multiplexer* mp = pin->get_mpx_ptr();
+
+        // get mpx index from Pin
+        int midx = pin->get_mpx_index();
+
+        // assign filter to multiplexer and clear smpl counter
+        __disable_irq();
+
+        mp->pointer(midx) = (void*) new AdcFilter;
+        mp->counter(midx) = 0;
+
+        // store the multiplexer here in Adc
+        mpxer[channel] = mp;
+        __enable_irq();
+    }
+    else
+        mpxer[channel] = NULL;
+
     this->adc->burst(1);
     this->adc->setup(pin_name, 1);
     this->adc->interrupt_state(pin_name, 1);
@@ -66,12 +98,47 @@ void Adc::enable_pin(Pin *pin)
 
 // Keeps the last 8 values for each channel
 // This is called in an ISR, so sample_buffers needs to be accessed atomically
+// special handling for multiplexed pins
 void Adc::new_sample(int chan, uint32_t value)
 {
-    // Shuffle down and add new value to the end
-    if(chan < num_channels) {
-        memmove(&sample_buffers[chan][0], &sample_buffers[chan][1], sizeof(sample_buffers[0]) - sizeof(sample_buffers[0][0]));
-        sample_buffers[chan][num_samples - 1] = (value >> 4) & 0xFFF; // the 12 bit ADC reading
+    // if current channel is multiplexed do a special store
+    if (mpxer[chan]) {
+
+        // timing: aprox. every 1ms one ADC channel is sampled
+        short adc = (value >> 4) & 0xfff;
+
+        // get current multiplexer channel index
+        int mpx_idx = mpxer[chan]->get_index(); // current index in multiplexer
+
+        // get per mpx channel counter
+        unsigned & utmp = mpxer[chan]->counter(mpx_idx);
+
+        // discard every 1st sample, store every 2nd
+        if (utmp % 2) {
+
+            /*
+             * if using two mpxer channels on one ADC channel
+             * mpxer[chan] will be set. It might happen that the 2nd
+             * mpxer chan does not have a filter assigned yet. So we
+             * need to protect the ptr access
+             */
+            AdcFilter* & filt = (AdcFilter* &)mpxer[chan]->pointer(mpx_idx);
+            if (filt)
+                filt->write(adc);
+
+            // increment for next sample
+            mpxer[chan]->inc_index();      // increment the index of that mpxer
+            mpxer[chan]->apply_index();    // for next sample, set in hardware
+        }
+        // increment per mpx channel counter
+        utmp ++;
+    }
+    else { // original code
+        // Shuffle down and add new value to the end
+        if(chan < num_channels) {
+            memmove(&sample_buffers[chan][0], &sample_buffers[chan][1], sizeof(sample_buffers[0]) - sizeof(sample_buffers[0][0]));
+            sample_buffers[chan][num_samples - 1] = (value >> 4) & 0xFFF; // the 12 bit ADC reading
+        }
     }
 }
 
@@ -136,9 +203,35 @@ PinName Adc::_pin_to_pinname(Pin *pin)
         return p19;
     } else if( pin->port == LPC_GPIO1 && pin->pin == 31 ) {
         return p20;
+
+    } else if( pin->port == LPC_GPIO0 && pin->pin == 2 ) { // fabbster LM35 temp. sens.
+        return P0_2;
+    } else if( pin->port == LPC_GPIO0 && pin->pin == 3 ) { // fabbster 8 x multiplexed temp/analogue in
+        return P0_3;
+
     } else {
         //TODO: Error
         return NC;
     }
+}
+
+
+uint16_t Adc::read_mpx (Pin *pin)
+{
+    if (pin->is_multiplexed())
+    {
+        int chan = pin->get_adc_ch();
+        assert (chan >= 0 && chan <= 7);
+
+        uint16_t res;
+
+        int mpidx = pin->get_mpx_index();
+        AdcFilter* & filt = (AdcFilter* &)mpxer[chan]->pointer(mpidx);
+        res = filt->read();
+
+        return res;
+    }
+    else
+        return read(pin);
 }
 
