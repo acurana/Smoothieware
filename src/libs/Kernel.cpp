@@ -20,6 +20,7 @@
 #include "libs/PublicData.h"
 #include "modules/communication/SerialConsole.h"
 #include "modules/communication/GcodeDispatch.h"
+#include "modules/utils/multiplexer/MpxContainer.h"
 #include "modules/robot/Planner.h"
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
@@ -47,8 +48,12 @@ Kernel::Kernel(){
     instance= this; // setup the Singleton instance of the kernel
 
     // serial first at fixed baud rate (DEFAULT_SERIAL_BAUD_RATE) so config can report errors to serial
-	// Set to UART0, this will be changed to use the same UART as MRI if it's enabled
+    // Set to UART0, this will be changed to use the same UART as MRI if it's enabled
+#ifdef COMPILE_FOR_FABBSTER
+    this->serial = new SerialConsole(P4_28, P4_29, DEFAULT_SERIAL_BAUD_RATE); // uart3
+#else
     this->serial = new SerialConsole(USBTX, USBRX, DEFAULT_SERIAL_BAUD_RATE);
+#endif
 
     // Config next, but does not load cache yet
     this->config = new Config();
@@ -71,7 +76,11 @@ Kernel::Kernel(){
 #if MRI_ENABLE != 0
     switch( __mriPlatform_CommUartIndex() ) {
         case 0:
+#ifdef COMPILE_FOR_FABBSTER
+            this->serial = new SerialConsole(P4_28, P4_29, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(DEFAULT_SERIAL_BAUD_RATE)->as_number());
+#else
             this->serial = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(DEFAULT_SERIAL_BAUD_RATE)->as_number());
+#endif
             break;
         case 1:
             this->serial = new SerialConsole(  p13,   p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(DEFAULT_SERIAL_BAUD_RATE)->as_number());
@@ -86,7 +95,11 @@ Kernel::Kernel(){
 #endif
     // default
     if(this->serial == NULL) {
+#ifdef COMPILE_FOR_FABBSTER
+        this->serial = new SerialConsole(P4_28, P4_29, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(DEFAULT_SERIAL_BAUD_RATE)->as_number());
+#else
         this->serial = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(DEFAULT_SERIAL_BAUD_RATE)->as_number());
+#endif
     }
 
     //some boards don't have leds.. TOO BAD!
@@ -136,6 +149,11 @@ Kernel::Kernel(){
     this->step_ticker->set_reset_delay( microseconds_per_step_pulse );
     this->step_ticker->set_frequency( this->base_stepping_frequency );
     this->step_ticker->set_acceleration_ticks_per_second(acceleration_ticks_per_second); // must be set after set_frequency
+
+    // multiplexers need to be added before any modules using multiplexed pins
+    #ifndef NO_UTILS_MULTIPLEXERS
+    add_module( new MpxContainer() );
+    #endif
 
     // Core modules
     this->add_module( this->gcode_dispatch = new GcodeDispatch() );
