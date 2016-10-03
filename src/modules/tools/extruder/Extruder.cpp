@@ -39,6 +39,11 @@
 #define y_offset_checksum                    CHECKSUM("y_offset")
 #define z_offset_checksum                    CHECKSUM("z_offset")
 
+// the fabbster motor driver board has additional pins to set microstepping
+#define  m1_pin_checksum                     CHECKSUM("m1_pin")
+#define  m2_pin_checksum                     CHECKSUM("m2_pin")
+#define  m3_pin_checksum                     CHECKSUM("m3_pin")
+
 #define retract_length_checksum              CHECKSUM("retract_length")
 #define retract_feedrate_checksum            CHECKSUM("retract_feedrate")
 #define retract_recover_length_checksum      CHECKSUM("retract_recover_length")
@@ -92,6 +97,14 @@ void Extruder::config_load()
     step_pin.from_string( THEKERNEL->config->value(extruder_checksum, this->identifier, step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
     dir_pin.from_string(  THEKERNEL->config->value(extruder_checksum, this->identifier, dir_pin_checksum           )->by_default("nc" )->as_string())->as_output();
     en_pin.from_string(   THEKERNEL->config->value(extruder_checksum, this->identifier, en_pin_checksum            )->by_default("nc" )->as_string())->as_output();
+
+    this->m1_pin.from_string(   THEKERNEL->config->value(extruder_checksum, this->identifier, m1_pin_checksum            )->by_default("nc" )->as_string())->as_output();
+    this->m2_pin.from_string(   THEKERNEL->config->value(extruder_checksum, this->identifier, m2_pin_checksum            )->by_default("nc" )->as_string())->as_output();
+    this->m3_pin.from_string(   THEKERNEL->config->value(extruder_checksum, this->identifier, m3_pin_checksum            )->by_default("nc" )->as_string())->as_output();
+
+    m1_pin.set(0); // nicht inverted ! // @todo
+    m2_pin.set(0);
+    m3_pin.set(1);
 
     float steps_per_millimeter = THEKERNEL->config->value(extruder_checksum, this->identifier, steps_per_mm_checksum)->by_default(1)->as_number();
     float acceleration         = THEKERNEL->config->value(extruder_checksum, this->identifier, acceleration_checksum)->by_default(1000)->as_number();

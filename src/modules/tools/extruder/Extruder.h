@@ -39,6 +39,10 @@ class Extruder : public Tool {
 
         StepperMotor *stepper_motor;
 
+        Pin            m1_pin;
+        Pin            m2_pin;
+        Pin            m3_pin;
+
         float extruder_multiplier;          // flow rate 1.0 == 100%
         float filament_diameter;            // filament diameter
         float volumetric_multiplier;
