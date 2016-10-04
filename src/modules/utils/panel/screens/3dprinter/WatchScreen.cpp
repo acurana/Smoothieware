@@ -65,7 +65,7 @@ void WatchScreen::on_enter()
     get_current_status();
     get_current_pos(this->pos);
     get_sd_play_info();
-    this->current_speed = lround(get_current_speed());
+    this->current_speed = lroundf(get_current_speed());
     this->refresh_screen(false);
     THEPANEL->enter_control_mode(1, 0.5);
     THEPANEL->set_control_value(this->current_speed);
@@ -122,7 +122,7 @@ void WatchScreen::on_refresh()
             this->speed_changed = false;
         } else if (!this->issue_change_speed) { // change still queued
             // read it in case it was changed via M220
-            this->current_speed = lround(get_current_speed());
+            this->current_speed = lroundf(get_current_speed());
             THEPANEL->set_control_value(this->current_speed);
             THEPANEL->reset_counter();
         }
@@ -197,12 +197,7 @@ void WatchScreen::get_current_status()
 float WatchScreen::get_current_speed()
 {
     // in percent
-    return 6000.0F / THEKERNEL->robot->get_seconds_per_minute();
-}
-
-void WatchScreen::get_current_pos(float *cp)
-{
-    THEKERNEL->robot->get_axis_position(cp);
+    return 6000.0F / THEROBOT->get_seconds_per_minute();
 }
 
 void WatchScreen::get_sd_play_info()
@@ -274,7 +269,7 @@ const char *WatchScreen::get_status()
     if (THEPANEL->is_playing())
         return THEPANEL->get_playing_file();
 
-    if (!THEKERNEL->conveyor->is_queue_empty())
+    if (!THECONVEYOR->is_idle())
         return "Printing";
 
     const char *ip = get_network();
