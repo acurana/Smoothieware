@@ -12,7 +12,7 @@
 
 class StepperMotor  : public Module {
     public:
-        StepperMotor(Pin& step, Pin& dir, Pin& en);
+        StepperMotor(Pin &step, Pin &dir, Pin &en, Pin &m1, Pin &m2, Pin &m3);
         ~StepperMotor();
 
         // called from step ticker ISR
@@ -36,6 +36,7 @@ class StepperMotor  : public Module {
         float get_steps_per_mm()  const { return steps_per_mm; }
         void change_steps_per_mm(float);
         void change_last_milestone(float);
+        void change_microsteps(int);
         void set_last_milestones(float, int32_t);
         void update_last_milestones(float mm, int32_t steps);
         float get_last_milestone(void) const { return last_milestone_mm; }
@@ -61,6 +62,13 @@ class StepperMotor  : public Module {
         Pin step_pin;
         Pin dir_pin;
         Pin en_pin;
+
+        // fabbster microstepping control pins
+        Pin m1_pin;
+        Pin m2_pin;
+        Pin m3_pin;
+
+        int num_ms;
 
         float steps_per_second;
         float steps_per_mm;

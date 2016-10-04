@@ -13,8 +13,11 @@
 #include <math.h>
 #include "mbed.h"
 
-StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_pin(dir), en_pin(en)
+StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en, Pin &m1, Pin &m2, Pin &m3)
+    : step_pin(step), dir_pin(dir), en_pin(en), m1_pin(m1), m2_pin(m2), m3_pin(m3)
 {
+    change_microsteps(1); // initially set to full steps
+
     set_high_on_debug(en.port_number, en.pin);
 
     steps_per_mm         = 1.0F;
@@ -67,6 +70,46 @@ void StepperMotor::change_last_milestone(float new_milestone)
     last_milestone_steps = lroundf(last_milestone_mm * steps_per_mm);
     current_position_steps = last_milestone_steps;
 }
+
+void StepperMotor::change_microsteps(int ms)
+{
+    num_ms = ms;
+
+    switch (num_ms) {
+    case 1:
+        m1_pin.set(1);
+        m2_pin.set(0);
+        m3_pin.set(1);
+        break;
+    case 2:
+        m1_pin.set(1);
+        m2_pin.set(0);
+        m3_pin.set(0);
+        break;
+    case 4:
+        m1_pin.set(0);
+        m2_pin.set(1);
+        m3_pin.set(1);
+        break;
+    case 8:
+        m1_pin.set(0);
+        m2_pin.set(1);
+        m3_pin.set(0);
+        break;
+    case 16: // set 16 microsteps on fabbster, see THB7128 datasheet
+    default:
+        m1_pin.set(0);
+        m2_pin.set(0);
+        m3_pin.set(1);
+        break;
+    case 32:
+        m1_pin.set(0);
+        m2_pin.set(0);
+        m3_pin.set(0);
+        break;
+    }
+}
+
 
 void StepperMotor::set_last_milestones(float mm, int32_t steps)
 {
