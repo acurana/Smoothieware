@@ -292,7 +292,7 @@ void Pin::multiplexed_pin(char const* cp)
  * special getter for the multiplexed case
  * measured with scope: approx. 14usec until pin is read, mpx index 7
  */
-bool Pin::get_multiplexed(void)
+bool Pin::get_multiplexed(void) const
 {
     mpx->set_index(idx);    // store new index in multiplexer
     mpx->apply_index();     // make multiplexed data present at (input) pin

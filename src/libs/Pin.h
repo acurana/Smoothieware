@@ -86,22 +86,15 @@ class Pin {
         unsigned char pin;
         char port_number;
 
-    private:
-        struct {
-            bool inverting:1;
-            bool valid:1;
-            bool multiplexed:1;
-        };
-
         void multiplexed_pin(char const* cp);	// for "from_string"
 
-        bool get_multiplexed(void);				// read pin
+        bool get_multiplexed(void) const;		// read pin
         void set_multiplexed(bool value);       // write pin
 
         uint8_t get_mpx_index(void);            // returns the multiplexer channel for that pin
         //void set_mpx_index(uint8_t);
 
-        //void set_mpx_channel(void);				// apply mpx channel on the pins
+        //void set_mpx_channel(void);			  // apply mpx channel on the pins
 
         bool is_multiplexed(void);				// check if pin is mpxed
 
@@ -113,6 +106,12 @@ class Pin {
         Multiplexer* get_mpx_ptr(void);
 
     private:
+        struct {
+            bool inverting:1;
+            bool valid:1;
+            bool multiplexed:1;
+        };
+
         /*
          * a pin may be multiplexed via analogue switch or shift register
          */
