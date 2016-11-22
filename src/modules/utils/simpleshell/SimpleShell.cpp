@@ -1176,7 +1176,7 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("get temp [bed|hotend]\r\n");
     stream->printf("set_temp bed|hotend 185\r\n");
     stream->printf("net\r\n");
-    stream->printf("load [file] - loads a configuration override file from soecified name or config-override\r\n");
+    stream->printf("load [file] - loads a configuration override file from specified name or config-override\r\n");
     stream->printf("save [file] - saves a configuration override file as specified filename or as config-override\r\n");
     stream->printf("upload filename - saves a stream of text to the named file\r\n");
     stream->printf("calc_thermistor [-s0] T1,R1,T2,R2,T3,R3 - calculate the Steinhart Hart coefficients for a thermistor\r\n");
