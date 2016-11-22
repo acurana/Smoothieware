@@ -45,7 +45,9 @@ void Mpx165::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
     load_s2.set(1);     // low pulse will latch data into shift reg
 }
 
-
+/*
+ * this function takes approx. 3 usec. for index 7 (measured with scope)
+ */
 void Mpx165::apply_index(void)
 {
     uint8_t i;
