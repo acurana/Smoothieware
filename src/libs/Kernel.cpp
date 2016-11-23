@@ -168,9 +168,9 @@ Kernel::Kernel(){
     #endif
 
     // Core modules
+    this->add_module( this->conveyor       = new Conveyor()      );
     this->add_module( this->gcode_dispatch = new GcodeDispatch() );
     this->add_module( this->robot          = new Robot()         );
-    this->add_module( this->conveyor       = new Conveyor()      );
     this->add_module( this->simpleshell    = new SimpleShell()   );
 
     this->planner = new Planner();
