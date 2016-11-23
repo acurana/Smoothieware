@@ -95,8 +95,15 @@ ifneq "$(AXIS)" ""
 DEFINES += -DMAX_ROBOT_ACTUATORS=$(AXIS)
 endif
 
-# set to not compile in any network support
-#export NONETWORK = 1
+# compile for fabbster cnc4nf-mb rev. 1.1 board
+export COMPILE_FOR_FABBSTER = 1
+
+ifneq "$(COMPILE_FOR_FABBSTER)" ""
+DEFINES += -DCOMPILE_FOR_FABBSTER
+endif
+
+# currently no network support for fabbster cnc4nf-mb rev. 1.1 board
+export NONETWORK = 1
 
 include $(BUILD_DIR)/build.mk
 
