@@ -59,8 +59,8 @@ endif
 
 ifeq "$(BUILD_TYPE)" "Debug"
 OPTIMIZATION = 0
-MRI_ENABLE ?= 0
-MRI_SEMIHOST_STDIO ?= 0
+MRI_ENABLE ?= 1
+MRI_SEMIHOST_STDIO ?= 1
 endif
 
 
@@ -139,8 +139,7 @@ OBJECTS += $(OUTDIR)/configdefault.o
 DEPFILES = $(patsubst %.o,%.d,$(OBJECTS))
 
 # Linker script to be used.  Indicates what code should be placed where in memory.
-#LSCRIPT=$(MBED_DIR)/$(DEVICE)/GCC_ARM/$(DEVICE).ld
-LSCRIPT=/home/chris/workspace-smoothieware/Smoothieware/ConfigSamples/fabbsterG/LPC1768.ld
+LSCRIPT=$(MBED_DIR)/$(DEVICE)/GCC_ARM/$(DEVICE).ld
 
 # Location of external library and header dependencies.
 MBED_DIR = $(BUILD_DIR)/../mbed/drop

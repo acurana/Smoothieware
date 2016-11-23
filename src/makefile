@@ -6,9 +6,7 @@ DEVICES=lpc1768
 #  Checked - Optimizations enabled with MRI debug monitor support. (Recommended Type)
 #  Release - Optimizations enabled.
 #  Debug - Optimization disabled with MRI debug monitor support.
-#BUILD_TYPE=Checked
-#BUILD_TYPE=Debug
-BUILD_TYPE=Release
+BUILD_TYPE=Checked
 
 # Set to 1 to tag each heap allocation with the caller's return address.
 # NOTE: Can't be enabled with latest build as not compatible with newlib nano.
@@ -58,18 +56,6 @@ DEFINES += -DCHECKSUM_USE_CPP -DDEFAULT_SERIAL_BAUD_RATE=$(DEFAULT_SERIAL_BAUD_R
 ifneq "$(STEPTICKER_DEBUG_PIN)" ""
 # Set a Pin here that toggles on end of move
 DEFINES += -DSTEPTICKER_DEBUG_PIN=$(STEPTICKER_DEBUG_PIN)
-endif
-
-# Set to 1 to compile a firmware for the fabbster 3D printer. The fabbster 3D
-# printer was discontinued mid 2015. The CPU board is somewhat similar to the
-# Smoothieboard, but uses some shift register multiplexed I/O. grep for 
-# COMPILE_FOR_FABBSTER to find the #ifdefs in the code and the files that were 
-# added specifically for this printer board. Also see http://wiki.fabbster.com/Main_Page.
-#
-# example make call: make COMPILE_FOR_FABBSTER=1 all
-#
-ifneq "$(COMPILE_FOR_FABBSTER)" ""
-DEFINES += -DCOMPILE_FOR_FABBSTER -DCORE_M3
 endif
 
 # include an optional default set of excludes
@@ -129,6 +115,8 @@ COPY=copy
 endif
 
 .PHONY: debug-store flash upload debug console dfu
+print-%  : ; @echo $* = $($*)
+
 print-%  : ; @echo $* = $($*)
 
 debug-store: ../LPC1768/$(PROJECT).elf
