@@ -1,10 +1,11 @@
 # NOTE Lines must not exceed 132 characters
-# Robot module configurations : general handling of movement G-codes and slicing into moves
+## Robot module configurations : general handling of movement G-codes and slicing into moves
 default_feed_rate                            4000             # Default rate ( mm/minute ) for G1/G2/G3 moves
 default_seek_rate                            4000             # Default rate ( mm/minute ) for G0 moves
-mm_per_arc_segment                           0.5              # Arcs are cut into segments ( lines ), this is the length for
-                                                              # these segments. Smaller values mean more resolution,
-                                                              # higher values mean faster computation
+mm_per_arc_segment                           0.0              # Fixed length for line segments that divide arcs 0 to disable
+mm_max_arc_error                             0.01             # The maximum error for line segments that divide arcs 0 to disable
+                                                              # note it is invalid for both the above be 0
+                                                              # if both are used, will use largest segment length based on radius
 #mm_per_line_segment                          5                # Lines can be cut into segments ( not usefull with cartesian
                                                               # coordinates robots ).
 
@@ -16,16 +17,13 @@ gamma_steps_per_mm                           613.851428571429 # Steps per mm for
 # Planner module configuration : Look-ahead and acceleration configuration
 planner_queue_size                           32               # DO NOT CHANGE THIS UNLESS YOU KNOW EXACTLY WHAT YOU ARE DOING
 acceleration                                 3000             # Acceleration in mm/second/second.
-#z_acceleration                               500              # Acceleration for Z only moves in mm/s^2, 0 uses acceleration which
-                                                               # is the default. DO NOT SET ON A DELTA
-acceleration_ticks_per_second                1000             # Number of times per second the speed is updated
+#z_acceleration                              500              # Acceleration for Z only moves in mm/s^2, 0 uses acceleration which is the default. DO NOT SET ON A DELTA
 junction_deviation                           0.05             # Similar to the old "max_jerk", in millimeters,
                                                               # see https://github.com/grbl/grbl/blob/master/planner.c
                                                               # and https://github.com/grbl/grbl/wiki/Configuring-Grbl-v0.8
                                                               # Lower values mean being more careful, higher values means being
                                                               # faster and have more jerk
-#z_junction_deviation                         0.0              # for Z only moves, -1 uses junction_deviation, zero disables
-                                                               # junction_deviation on Z moves DO NOT SET ON A DELTA
+#z_junction_deviation                        0.0              # for Z only moves, -1 uses junction_deviation, zero disables junction_deviation on z moves DO NOT SET ON A DELTA
 #minimum_planner_speed                        0.0              # sets the minimum planner speed in mm/sec
 
 # Stepper module configuration
@@ -35,7 +33,7 @@ base_stepping_frequency                      100000           # Base frequency f
 # Cartesian axis speed limits
 x_axis_max_speed                             30000            # mm/min
 y_axis_max_speed                             30000            # mm/min
-z_axis_max_speed                             3000             # mm/min
+z_axis_max_speed                             2400             # mm/min
 
 # Multiplexers on fabbster board
 # Multiplexer 1: (m.1), 4051, analogue multiplexer, used for temperature measurements
@@ -81,7 +79,7 @@ alpha_max_rate                               30000.0          # mm/min
 alpha_m1_pin                                 1.27             # M1 Pin on fabbster driver board
 alpha_m3_pin                                 3.25             # M2 Pin on fabbster driver board
 alpha_m2_pin                                 1.31             # M3 Pin on fabbster driver board
-alpha_microsteps                             16          # impl. me   
+alpha_microsteps                             16               # number of microsteps that will be set for the stepper driver
 
 beta_step_pin                                1.19             # Pin for beta stepper step signal
 beta_dir_pin                                 1.28!            # Pin for beta stepper direction
@@ -93,63 +91,64 @@ beta_max_rate                                30000.0          # mm/min
 beta_m1_pin                                  1.22             # M1 Pin on fabbster driver board
 beta_m3_pin                                  3.26             # M2 Pin on fabbster driver board
 beta_m2_pin                                  0.27             # M3 Pin on fabbster driver board
-beta_microsteps                              16         # impl. me   
+beta_microsteps                              16               # number of microsteps that will be set for the stepper driver
 
 gamma_step_pin                               1.20             # Pin for gamma stepper step signal
 gamma_dir_pin                                0.28!            # Pin for gamma stepper direction
 gamma_en_pin                                 2.8!m.2.2        # Pin for gamma enable
 gamma_current                                1.5              # Z stepper motor current
-gamma_max_rate                               3000             # mm/min
+gamma_max_rate                               2400.0           # mm/min
 
 # additional pins on fabbster board to set microstepping. see THB7128 datasheet
 gamma_m1_pin                                 0.24             # M1 Pin on fabbster driver board
 gamma_m3_pin                                 0.26             # M2 Pin on fabbster driver board
 gamma_m2_pin                                 1.1              # M3 Pin on fabbster driver board
-gamma_microsteps                             16         # impl. me   
+gamma_microsteps                             16               # number of microsteps that will be set for the stepper driver
 
-# Serial communications configuration ( baud rate default to 9600 if undefined )
+## System configuration
+# Serial communications configuration ( baud rate defaults to 9600 if undefined )
 uart0.baud_rate                              115200           # Baud rate for the default hardware serial port
 second_usb_serial_enable                     false            # This enables a second usb serial port (to have both pronterface
                                                               # and a terminal connected)
 # @todo for fabbster: make leds multiplexed for gpio/kernel leds
 leds_disable                                 true       # disable using leds after config loaded
 #play_led_disable                             true             # disable the play led
-play_led_pin                                 2.12!m.3.0       # fabbster what @tod led
+play_led_pin                                 2.12!m.3.0       # fabbster what @todo led
 
-# kill button (used to be called pause) maybe assigned to a different pin, set to the onboard pin by default
+# Kill button (used to be called pause) maybe assigned to a different pin, set to the onboard pin by default
 kill_button_enable                           true             # set to true to enable a kill button
-kill_button_pin                              2.11             # kill button pin. default is same as pause button 2.12 (2.11 is
-                                                              # another good choice)
+kill_button_pin                              2.11             # kill button pin. default is same as pause button 2.12 (2.11 is another good choice)
 
-#msd_disable                                  false            # disable MSD (USB SDCARD) when set to true (needs special binary)
+#msd_disable                                 false            # disable the MSD (USB SDCARD) when set to true (needs special binary)
 #dfu_enable                                   false            # for linux developers, set to true to enable DFU
-#watchdog_timeout                             10               # watchdog timeout in seconds, default is 10, set to 0 to disable
-                                                               # the watchdog
-# Extruder module configuration
-extruder.hotend.enable                       true             # Whether to activate the extruder module at all. All configuration is
-                                                              # ignored if false
+#watchdog_timeout                            10               # watchdog timeout in seconds, default is 10, set to 0 to disable the watchdog
+
+# Only needed on a smoothieboard
+currentcontrol_module_enable                 false            #
+
+## Extruder module configuration
+extruder.hotend.enable                       true             # Whether to activate the extruder module at all. All configuration is ignored if false
 extruder.hotend.steps_per_mm                 801.5933105577   # old: 795.2607234043 Steps per mm for extruder stepper
 extruder.hotend.default_feed_rate            600              # Default rate ( mm/minute ) for moves where only the extruder moves
 extruder.hotend.acceleration                 500              # Acceleration for the stepper motor mm/sec²
 extruder.hotend.max_speed                    50               # mm/s
 
 extruder.hotend.step_pin                     1.21             # Pin for extruder step signal
-extruder.hotend.dir_pin                      0.23             # Pin for extruder dir signal
+extruder.hotend.dir_pin                      0.23!            # Pin for extruder dir signal
 extruder.hotend.en_pin                       2.8!m.2.3         # Pin for extruder enable signal
 
 # additional pins on fabbster board to set microstepping. see THB7128 datasheet
 extruder.hotend.m1_pin                       0.25             # M1 Pin on fabbster driver board
 extruder.hotend.m3_pin                       1.0              # M2 Pin on fabbster driver board
 extruder.hotend.m2_pin                       1.4              # M3 Pin on fabbster driver board
-extruder_microsteps                          16         # impl. me   
+extruder_microsteps                          16               # number of microsteps that will be set for the stepper driver
 
 # extruder offset
 #extruder.hotend.x_offset                     0                # x offset from origin in mm
 #extruder.hotend.y_offset                     0                # y offset from origin in mm
 #extruder.hotend.z_offset                     0                # z offset from origin in mm
 
-# firmware retract settings when using G10/G11, these are the defaults if not defined, must be defined for each extruder if not 
-                                                               # using the defaults
+# firmware retract settings when using G10/G11, these are the defaults if not defined, must be defined for each extruder if not using the defaults
 #extruder.hotend.retract_length               3                # retract length in mm
 #extruder.hotend.retract_feedrate             45               # retract feedrate in mm/sec
 #extruder.hotend.retract_recover_length       0                # additional length for recover
@@ -160,8 +159,7 @@ extruder_microsteps                          16         # impl. me
 delta_current                                1.5              # First extruder stepper motor current
 
 # Second extruder module configuration
-#extruder.hotend2.enable                      true             # Whether to activate the extruder module at all. All configuration
-                                                               # is ignored if false
+#extruder.hotend2.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
 #extruder.hotend2.steps_per_mm                140              # Steps per mm for extruder stepper
 #extruder.hotend2.default_feed_rate           600              # Default rate ( mm/minute ) for moves where only the extruder moves
 #extruder.hotend2.acceleration                500              # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
@@ -176,45 +174,42 @@ delta_current                                1.5              # First extruder s
 #extruder.hotend2.z_offset                    0                # z offset from origin in mm
 #epsilon_current                              1.5              # Second extruder stepper motor current
 
-# Laser module configuration
+## Laser module configuration
 laser_module_enable                          false            # Whether to activate the laser module at all. All configuration is
                                                               # ignored if false.
-#laser_module_pin                             2.5              # this pin will be PWMed to control the laser. Only P2.0 - P2.5,
-                                                               # P1.18, P1.20, P1.21, P1.23, P1.24, P1.26, P3.25, P3.26
+#laser_module_pin                             2.5             # this pin will be PWMed to control the laser. Only P2.0 - P2.5, P1.18, P1.20, P1.21, P1.23, P1.24, P1.26, P3.25, P3.26
                                                                # can be used since laser requires hardware PWM
 #laser_module_maximum_power                   1.0              # this is the maximum duty cycle that will be applied to the laser
-#laser_module_minimum_power                   0.0              # This is a value just below the minimum duty cycle that keeps the
-                                                               # laser active without actually burning.
-#laser_module_default_power                   0.8              # This is the default laser power that will be used for cuts if a
-                                                               # power has not been specified.  The value is a scale between
+#laser_module_minimum_power                   0.0             # This is a value just below the minimum duty cycle that keeps the laser
+                                                              # active without actually burning.
+#laser_module_default_power                   0.8             # This is the default laser power that will be used for cuts if a power has not been specified.  The value is a scale between
                                                                # the maximum and minimum power levels specified above
 #laser_module_pwm_period                      20               # this sets the pwm frequency as the period in microseconds
 
-# Hotend temperature control configuration
-temperature_control.hotend.enable            true             # Whether to activate this ( "hotend" ) module at all
-                                                              # All configuration is ignored if false
+## Temperature control configuration
+# First hotend configuration
+temperature_control.hotend.enable            true             # Whether to activate this ( "hotend" ) module at all.
+                                                              # All configuration is ignored if false.
 temperature_control.hotend.thermistor_pin    0.3m.1.5         # Port 0, pin 3, multiplexed, multiplexer type 1 (4051), channel 5
 temperature_control.hotend.ref_pin           0.2              # Port 0, pin 2, fabbster LM35 ref volt.
 temperature_control.hotend.corr_fact         660              # linear corr. factor from heater wire to nozzle temperature *1000
-temperature_control.hotend.heater_pin        2.6!             # Pin that controls the heater, set to nc if a readonly thermistor is
-                                                              # being defined
-temperature_control.hotend.sensor            th_cp_k_amp_200  # fabbster uses a thermocouple with an internal 2nd thermocouple for
-                                                              # correction, amplified, factor 200
+temperature_control.hotend.heater_pin        2.6!             # Pin that controls the heater, set to nc if a readonly thermistor is being defined
+temperature_control.hotend.sensor            th_cp_k_amp_200  # fabbster uses a thermocouple with an internal 2nd thermocouple for correction, amplified, factor 200
 #temperature_control.hotend.thermistor        EPCOS100K        # See http://smoothieware.org/temperaturecontrol#toc5
 #temperature_control.hotend.beta              4066             # or set the beta value
 temperature_control.hotend.set_m_code        104              #
 temperature_control.hotend.set_and_wait_m_code 109            #
 temperature_control.hotend.designator        T                #
-#temperature_control.hotend.max_temp          300              # Set maximum temperature - will prevent heating above 300 by default
-#temperature_control.hotend.min_temp          0                # Set minimum temperature - will prevent heating below 0 if set
+#temperature_control.hotend.max_temp         300              # Set maximum temperature - Will prevent heating above 300 by default
+#temperature_control.hotend.min_temp         0                # Set minimum temperature - Will prevent heating below if set
 
 temperature_control.hotend.p_factor          19.3             # Permanently set the PID values after an auto pid
 temperature_control.hotend.i_factor          3.075            #
 temperature_control.hotend.d_factor          30               #
 
-#temperature_control.hotend.max_pwm           64               # Max. PWM, 64 is a good value if driving a 12V resistor with 24V.
+#temperature_control.hotend.max_pwm          64               # max pwm, 64 is a good value if driving a 12v resistor with 24v.
 
-# Hotend2 temperature control configuration
+# Second hotend configuration
 #temperature_control.hotend2.enable           true             # Whether to activate this ( "hotend" ) module at all.
                                                                # All configuration is ignored if false.
 
@@ -226,8 +221,8 @@ temperature_control.hotend.d_factor          30               #
 #temperature_control.hotend2.set_and_wait_m_code 109           #
 #temperature_control.hotend2.designator       T1               #
 
-#temperature_control.hotend2.p_factor         16.4             # permanently set the PID values after an auto pid
-#temperature_control.hotend2.i_factor         2.805            #
+#temperature_control.hotend2.p_factor          13.7           # permanently set the PID values after an auto pid
+#temperature_control.hotend2.i_factor          0.097          #
 #temperature_control.hotend2.d_factor         24               #
 
 #temperature_control.hotend2.max_pwm          64               # max pwm, 64 is a good value if driving a 12v resistor with 24v.
@@ -247,11 +242,11 @@ temperature_control.bed.set_and_wait_m_code  190              #
 temperature_control.bed.designator           B                #
 
 # fabbster does not have PWM on the heater pins, so use bang bang
-temperature_control.bed.bang_bang            true             # Set to true to use bang bang control rather than PID
-#temperature_control.bed.hysteresis           2.0              # Set to the temperature in degrees C to use as hysteresis
+temperature_control.bed.bang_bang            true             # set to true to use bang bang control rather than PID
+#temperature_control.bed.hysteresis           2.0              # set to the temperature in degrees C to use as hysteresis
                                                                # when using bang bang
 
-# Switch module for fan control
+## Switch module for fan control
 switch.fan.enable                            true             #
 switch.fan.input_on_command                  M106             #
 switch.fan.input_off_command                 M107             #
@@ -265,37 +260,42 @@ switch.fan.output_type                       pwm              # pwm output setta
 #switch.misc.output_pin                       2.4              #
 #switch.misc.output_type                      digital          # just an on or off pin
 
-# automatically toggle a switch at a specified temperature. Different ones of these may be defined to monitor different temperatures
-# and switch different switches, useful to turn on a fan or water pump to cool the hotend
+# Switch module for spindle control
+#switch.spindle.enable                        false            #
+
+## Temperatureswitch :
+# automatically toggle a switch at a specified temperature. Different ones of these may be defined to monitor different temperatures and switch different swithxes
+# useful to turn on a fan or water pump to cool the hotend
 #temperatureswitch.hotend.enable              true             #
-#temperatureswitch.hotend.designator          T                # first character of the temperature control designator to use as the
-                                                               # temperature sensor to monitor
+#temperatureswitch.hotend.designator          T                # first character of the temperature control designator to use as the temperature sensor to monitor
 #temperatureswitch.hotend.switch              misc             # select which switch to use, matches the name of the defined switch
 #temperatureswitch.hotend.threshold_temp      60.0             # temperature to turn on (if rising) or off the switch
 #temperatureswitch.hotend.heatup_poll         15               # poll heatup at 15 sec intervals
 #temperatureswitch.hotend.cooldown_poll       60               # poll cooldown at 60 sec intervals
 
-# Switch module for spindle control
-#switch.spindle.enable                        false            #
 
-# Endstops
+## Endstops
 endstops_enable                              true             # the endstop module is enabled by default and can be disabled here
 #corexy_homing                                false            # set to true if homing on a hbot or corexy
 alpha_min_endstop                            2.0m.4.5         # add a ! to invert if endstop is NOT connected to ground
 alpha_max_endstop                            nc               # NOTE set to nc if this is not installed
 alpha_homing_direction                       home_to_min      # or set to home_to_max and set alpha_max
-alpha_min                                    -9.0             # this gets loaded after homing when home_to_min is set
-alpha_max                                    225              # this gets loaded after homing when home_to_max is set
+alpha_min                                    -8.0             # this gets loaded after homing when home_to_min is set
+alpha_max                                    0                # this gets loaded after homing when home_to_max is set
 beta_min_endstop                             2.0m.4.6         # multiplexed on fabbster
 beta_max_endstop                             nc               #
 beta_homing_direction                        home_to_min      #
 beta_min                                     -17.0            #
-beta_max                                     225              #
+beta_max                                     0                #
 gamma_min_endstop                            nc               #
 gamma_max_endstop                            2.0m.4.7         # multiplexed on fabbster
 gamma_homing_direction                       home_to_max      #
 gamma_min                                    0                #
-gamma_max                                    210              #
+gamma_max                                    205              #
+
+alpha_max_travel                             500              # max travel in mm for alpha/X axis when homing
+beta_max_travel                              500              # max travel in mm for beta/Y axis when homing
+gamma_max_travel                             500              # max travel in mm for gamma/Z axis when homing
 
 # optional order in which axis will home, default is they all home at the same time,
 # if this is set it will force each axis to home one at a time in the specified order
@@ -319,34 +319,29 @@ beta_homing_retract_mm                       5                # "
 gamma_homing_retract_mm                      1                # "
 
 #endstop_debounce_count                       100              # uncomment if you get noise on your endstops, default is 100
-
-# optional Z probe
+endstop_debounce_ms                          5                # needed for fabbster to eliminate noise
+ 
+## Z-probe
 zprobe.enable                                true             # set to true to enable a zprobe
 zprobe.probe_pin                             2.0!m.4.2        # pin probe is attached to if NC remove the !
 zprobe.slow_feedrate                         5                # mm/sec probe feed rate
-#zprobe.debounce_count                        100              # set if noisy
+zprobe.debounce_ms                           5                # needed for fabbster
 zprobe.fast_feedrate                         100              # move feedrate mm/sec
 zprobe.probe_height                          15               # how much above bed to start probe
 #gamma_min_endstop                            nc               # normally 1.28. Change to nc to prevent conflict,
 
 # associated with zprobe the leveling strategy to use
-leveling-strategy.three-point-leveling.enable        true        # a leveling strategy that probes three points to define a plane
-                                                                 # and keeps the Z parallel to that plane
-leveling-strategy.three-point-leveling.point1        110.0,80.0  # the first probe point (x,y) optional may be defined with M557
-leveling-strategy.three-point-leveling.point2        140.0,140.0 # the second probe point (x,y)
-leveling-strategy.three-point-leveling.point3        80.0,140.0  # the third probe point (x,y)
+leveling-strategy.three-point-leveling.enable        true        # a leveling strategy that probes three points to define a plane and keeps the Z parallel to that plane
+leveling-strategy.three-point-leveling.point1        110.0,40.0  # the first probe point (x,y) optional may be defined with M557
+leveling-strategy.three-point-leveling.point2        40.0,180.0  # the second probe point (x,y)
+leveling-strategy.three-point-leveling.point3        180.0,180.0 # the third probe point (x,y)
 leveling-strategy.three-point-leveling.home_first    false       # home the XY axis before probing
-#leveling-strategy.three-point-leveling.tolerance     0.03        # the probe tolerance in mm, anything less that this will be
-                                                                  # ignored, default is 0.03mm
-leveling-strategy.three-point-leveling.probe_offsets 0,-13.0,0   # the probe offsets from nozzle, must be x,y,z, default is no
-                                                                 # offset
-leveling-strategy.three-point-leveling.save_plane    true        # set to true to allow the bed plane to be saved with M500 default
-                                                                 # is false
-# Panel
+#leveling-strategy.three-point-leveling.tolerance     0.03       # the probe tolerance in mm, anything less that this will be ignored, default is 0.03mm
+leveling-strategy.three-point-leveling.probe_offsets 0,-14.0,0   # the probe offsets from nozzle, must be x,y,z, default is no offset
+leveling-strategy.three-point-leveling.save_plane    true        # set to true to allow the bed plane to be saved with M500 default is false
+
+## Panel
 panel.enable                                 true             # set to true to enable the panel code
-#panel.lcd                                    smoothiepanel    # set type of panel
-#panel.encoder_a_pin                          3.25!^           # encoder pin
-#panel.encoder_b_pin                          3.26!^           # encoder pin
 
 # Example for reprap discount GLCD
 # on glcd EXP1 is to left and EXP2 is to right, pin 1 is bottom left, pin 2 is top left etc.
@@ -374,7 +369,7 @@ panel.gamma_jog_feedrate                     200              # z jogging feedra
 panel.hotend_temperature                     185              # temp to set hotend when preheat is selected
 panel.bed_temperature                        40               # temp to set bed when preheat is selected
 
-# Example of a custom menu entry, which will show up in the Custom entry.
+## Custom menus : Example of a custom menu entry, which will show up in the Custom entry.
 # NOTE _ gets converted to space in the menu and commands, | is used to separate multiple commands
 custom_menu.power_on.enable                  true             #
 custom_menu.power_on.name                    Power_on         #
@@ -384,12 +379,7 @@ custom_menu.power_off.enable                 true             #
 custom_menu.power_off.name                   Power_off        #
 custom_menu.power_off.command                M81              #
 
-# Only needed on a smoothieboard, disabled for fabbster
-currentcontrol_module_enable                 false            #
-
-return_error_on_unhandled_gcode              false            #
-
-# network settings
+## Network settings
 network.enable                               false            # enable the ethernet network services
 network.webserver.enable                     true             # enable the webserver
 network.telnet.enable                        true             # enable the telnet server
