@@ -35,39 +35,6 @@ x_axis_max_speed                             30000            # mm/min
 y_axis_max_speed                             30000            # mm/min
 z_axis_max_speed                             2400             # mm/min
 
-# Multiplexers on fabbster board
-# Multiplexer 1: (m.1), 4051, analogue multiplexer, used for temperature measurements
-multiplexer.mpx_m1.enable                    true             #
-multiplexer.mpx_m1.type                      mpx_4051         #
-multiplexer.mpx_m1.channels                  8                #
-multiplexer.mpx_m1.clock_pin                 0.0              #
-multiplexer.mpx_m1.data_pin                  0.1              #
-multiplexer.mpx_m1.load_data_pin             0.10             #
-
-# Multiplexer 2: (m.2), 74xx595, output serial shift register, enable pins
-multiplexer.mpx_m2.enable                    true             #
-multiplexer.mpx_m2.type                      mpx_74xx595      #
-multiplexer.mpx_m2.channels                  8                #
-multiplexer.mpx_m2.clock_pin                 2.5              #
-multiplexer.mpx_m2.data_pin                  2.8              #
-multiplexer.mpx_m2.load_data_pin             2.7              #
-
-# Multiplexer 3: (m.3), 74xx595, output serial shift register, LED & Q outputs
-multiplexer.mpx_m3.enable                    true             #
-multiplexer.mpx_m3.type                      mpx_74xx595      #
-multiplexer.mpx_m3.channels                  8                #
-multiplexer.mpx_m3.clock_pin                 0.11             #
-multiplexer.mpx_m3.data_pin                  2.12             #
-multiplexer.mpx_m3.load_data_pin             2.13             #
-
-# Multiplexer 4: (m.4), 74xx165, input serial shift register, endswitches, other switches
-multiplexer.mpx_m4.enable                    true             #
-multiplexer.mpx_m4.type                      mpx_74xx165      #
-multiplexer.mpx_m4.channels                  8                #
-multiplexer.mpx_m4.clock_pin                 2.2              #
-multiplexer.mpx_m4.data_pin                  2.0              #
-multiplexer.mpx_m4.load_data_pin             2.1              #
-
 # Stepper module pins ( ports, and pin numbers, appending "!" to the number will invert a pin )
 alpha_step_pin                               1.18             # Pin for alpha stepper step signal
 alpha_dir_pin                                1.29             # Pin for alpha stepper direction
@@ -110,10 +77,17 @@ gamma_microsteps                             16               # number of micros
 uart0.baud_rate                              115200           # Baud rate for the default hardware serial port
 second_usb_serial_enable                     false            # This enables a second usb serial port (to have both pronterface
                                                               # and a terminal connected)
-# @todo for fabbster: make leds multiplexed for gpio/kernel leds
-leds_disable                                 true       # disable using leds after config loaded
+#leds_disable                                 true             # disable using leds after config loaded
 #play_led_disable                             true             # disable the play led
-play_led_pin                                 2.12!m.3.0       # fabbster what @todo led
+play_led_pin                                 2.12m.3.0       # fabbster multiplexed play led, not inv., play=LED off
+
+# multiplexed led pins on fabbster board
+led.green.enable                             true             # green LED D1, on indicates init done
+led.green.pin                                2.12!m.3.0
+led.red.enable                               true             # red LED D2, main loop alive indicator
+led.red.pin                                  2.12!m.3.1 
+led.blue.enable                              true             # blue LED D3, slow ticker indicator
+led.blue.pin                                 2.12!m.3.2 
 
 # Kill button (used to be called pause) maybe assigned to a different pin, set to the onboard pin by default
 kill_button_enable                           true             # set to true to enable a kill button
@@ -125,6 +99,39 @@ kill_button_pin                              2.11             # kill button pin.
 
 # Only needed on a smoothieboard
 currentcontrol_module_enable                 false            #
+
+## Multiplexers on fabbster board
+# Multiplexer 1: (m.1), 4051, analogue multiplexer, used for temperature measurements
+multiplexer.mpx_m1.enable                    true             #
+multiplexer.mpx_m1.type                      mpx_4051         #
+multiplexer.mpx_m1.channels                  8                #
+multiplexer.mpx_m1.clock_pin                 0.0              #
+multiplexer.mpx_m1.data_pin                  0.1              #
+multiplexer.mpx_m1.load_data_pin             0.10             #
+
+# Multiplexer 2: (m.2), 74xx595, output serial shift register, enable pins
+multiplexer.mpx_m2.enable                    true             #
+multiplexer.mpx_m2.type                      mpx_74xx595      #
+multiplexer.mpx_m2.channels                  8                #
+multiplexer.mpx_m2.clock_pin                 2.5              #
+multiplexer.mpx_m2.data_pin                  2.8              #
+multiplexer.mpx_m2.load_data_pin             2.7              #
+
+# Multiplexer 3: (m.3), 74xx595, output serial shift register, LED & Q outputs
+multiplexer.mpx_m3.enable                    true             #
+multiplexer.mpx_m3.type                      mpx_74xx595      #
+multiplexer.mpx_m3.channels                  8                #
+multiplexer.mpx_m3.clock_pin                 0.11             #
+multiplexer.mpx_m3.data_pin                  2.12             #
+multiplexer.mpx_m3.load_data_pin             2.13             #
+
+# Multiplexer 4: (m.4), 74xx165, input serial shift register, endswitches, other switches
+multiplexer.mpx_m4.enable                    true             #
+multiplexer.mpx_m4.type                      mpx_74xx165      #
+multiplexer.mpx_m4.channels                  8                #
+multiplexer.mpx_m4.clock_pin                 2.2              #
+multiplexer.mpx_m4.data_pin                  2.0              #
+multiplexer.mpx_m4.load_data_pin             2.1              #
 
 ## Extruder module configuration
 extruder.hotend.enable                       true             # Whether to activate the extruder module at all. All configuration is ignored if false
@@ -202,6 +209,11 @@ temperature_control.hotend.set_and_wait_m_code 109            #
 temperature_control.hotend.designator        T                #
 #temperature_control.hotend.max_temp         300              # Set maximum temperature - Will prevent heating above 300 by default
 #temperature_control.hotend.min_temp         0                # Set minimum temperature - Will prevent heating below if set
+
+# safety control is enabled by default and can be overidden here, the values show the defaults
+#temperature_control.hotend.runaway_heating_timeout      900   # max is 2040 seconds, how long it can take to heat up
+#temperature_control.hotend.runaway_cooling_timeout      900   # max is 2040 seconds, how long it can take to cool down if temp is set lower
+#temperature_control.hotend.runaway_range                20    # Max setting is 63°C
 
 temperature_control.hotend.p_factor          19.3             # Permanently set the PID values after an auto pid
 temperature_control.hotend.i_factor          3.075            #
@@ -351,6 +363,7 @@ panel.spi_channel                            1                # spi channel to u
 panel.spi_cs_pin                             0.6              # spi chip select     ; GLCD EXP1 Pin 4
 panel.encoder_a_pin                          1.25!^           # encoder pin         ; GLCD EXP2 Pin 3
 panel.encoder_b_pin                          1.26!^           # encoder pin         ; GLCD EXP2 Pin 5
+panel.encoder_resolution                     4                # override number of clicks to move 1 item (default is 2)
 panel.click_button_pin                       0.5!^            # click button        ; GLCD EXP1 Pin 2
 panel.buzz_pin                               0.4              # pin for buzzer      ; GLCD EXP1 Pin 1
 panel.back_button_pin                        2.3!^            # back button         ; GLCD EXP2 Pin 8

@@ -16,6 +16,9 @@
 
 #include <mri.h>
 
+#include "libs/LedsContainer.h"
+extern LedsContainer leds;
+
 // This module uses a Timer to periodically call hooks
 // Modules register with a function ( callback ) and a frequency, and we then call that function at the given frequency.
 
@@ -106,8 +109,9 @@ bool SlowTicker::flag_1s(){
     return false;
 }
 
-#include "gpio.h"
-extern GPIO leds[];
+//#include "gpio.h"
+//extern GPIO leds[];
+
 void SlowTicker::on_idle(void*)
 {
     static uint16_t ledcnt= 0;

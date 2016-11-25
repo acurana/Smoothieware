@@ -63,6 +63,11 @@ MRI_ENABLE ?= 1
 MRI_SEMIHOST_STDIO ?= 1
 endif
 
+ifeq "$(BUILD_TYPE)" "DebugNoMRI"
+OPTIMIZATION = 0
+MRI_ENABLE ?= 0
+MRI_SEMIHOST_STDIO ?= 0
+endif
 
 ifeq "$(BUILD_TYPE)" "Checked"
 OPTIMIZATION ?= 2
