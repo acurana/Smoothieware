@@ -30,6 +30,7 @@
 #include "modules/utils/PlayLed/PlayLed.h"
 #include "modules/utils/panel/Panel.h"
 #include "libs/Network/uip/Network.h"
+#include "libs/LedsContainer.h"
 #include "Config.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
@@ -86,6 +87,7 @@ USBMSD *msc= NULL;
 
 SDFAT mounter __attribute__ ((section ("AHBSRAM0"))) ("sd", &sd);
 
+#ifndef COMPILE_FOR_FABBSTER
 GPIO leds[5] = {
     GPIO(P1_18),
     GPIO(P1_19),
@@ -93,6 +95,9 @@ GPIO leds[5] = {
     GPIO(P1_21),
     GPIO(P4_28)
 };
+#else
+LedsContainer leds;
+#endif
 
 void init() {
 
@@ -225,7 +230,7 @@ void init() {
     }
 
     // 10 second watchdog timeout (or config as seconds)
-    float t= kernel->config->value( watchdog_timeout_checksum )->by_default(/*10.0F*/0.0F)->as_number(); // chris debug
+    float t= kernel->config->value( watchdog_timeout_checksum )->by_default(10.0F)->as_number();
     if(t > 0.1F) {
         // NOTE setting WDT_RESET with the current bootloader would leave it in DFU mode which would be suboptimal
         kernel->add_module( new Watchdog(t*1000000, WDT_MRI)); // WDT_RESET));
@@ -237,6 +242,8 @@ void init() {
 
     kernel->add_module( &u );
 
+    kernel->add_module( &leds );
+
     // memory before cache is cleared
     //SimpleShell::print_mem(kernel->streams);
 
@@ -246,7 +253,7 @@ void init() {
     if(kernel->is_using_leds()) {
         // set some leds to indicate status... led0 init done, led1 mainloop running, led2 idle loop running, led3 sdcard ok
         leds[0]= 1; // indicate we are done with init
-        leds[3]= sdok?1:0; // 4th led indicates sdcard is available (TODO maye should indicate config was found)
+//        leds[3]= sdok?1:0; // 4th led indicates sdcard is available (TODO maye should indicate config was found)
     }
 
     if(sdok) {

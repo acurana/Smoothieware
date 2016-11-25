@@ -5,8 +5,11 @@
 
 #include <mri.h>
 
-#include "gpio.h"
-extern GPIO leds[];
+//#include "gpio.h"
+//extern GPIO leds[];
+#include "libs/LedsContainer.h"
+extern LedsContainer leds;
+
 
 // TODO : comment this
 // Basically, when stuff stop answering, reset, or enter MRI mode, or something
@@ -49,7 +52,7 @@ extern "C" void WDT_IRQHandler(void)
         leds[0]= 0;
         leds[1]= 1;
         leds[2]= 0;
-        leds[3]= 1;
+//        leds[3]= 1;
     }
 
     WDT_ClrTimeOutFlag(); // bootloader uses this flag to enter DFU mode
