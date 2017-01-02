@@ -144,6 +144,7 @@ void Extruder::config_load()
     stepper_motor->set_acceleration(acceleration);
     stepper_motor->change_steps_per_mm(steps_per_millimeter);
     stepper_motor->set_selected(false); // not selected by default
+    stepper_motor->set_extruder(true);  // indicates it is an extruder
     stepper_motor->change_microsteps(THEKERNEL->config->value(extruder_checksum, this->identifier, microsteps_checksum)->by_default(16)->as_int());
 }
 
