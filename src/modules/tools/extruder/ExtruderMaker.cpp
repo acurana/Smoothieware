@@ -54,7 +54,7 @@ void ExtruderMaker::load_tools(){
 
     }else{
         // only one extruder so no tool manager required
-        THEKERNEL->streams->printf("NOTE: One extruder configured and enabled\n");
+        THEKERNEL->streams->printf("NOTE: One extruder configured and enabled\r\n");
     }
 
 
@@ -81,7 +81,7 @@ void ExtruderMaker::load_tools(){
 
     }
 
-    THEKERNEL->streams->printf("NOTE: %d extruders enabled out of %d\n", cnt, modules.size());
+    THEKERNEL->streams->printf("NOTE: %d extruders enabled out of %d\r\n", cnt, modules.size());
 }
 
 
