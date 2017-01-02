@@ -26,7 +26,9 @@ extern LedsContainer leds;
 
 SlowTicker* global_slow_ticker;
 
-SlowTicker::SlowTicker(){
+SlowTicker::SlowTicker()
+    : led_state(false)
+{
     global_slow_ticker = this;
 
     // ISP button FIXME: WHy is this here?
@@ -119,7 +121,11 @@ void SlowTicker::on_idle(void*)
     static uint16_t ledcnt= 0;
     if(THEKERNEL->is_using_leds()) {
         // flash led 3 to show we are alive
-        leds[2]= (ledcnt++ & 0x1000) ? 1 : 0;
+        bool new_state = (ledcnt++ & 0x2000);
+        if (new_state != led_state) { // fabbster: only set multiplexed led if it has changed
+            leds[2] = new_state;
+            led_state = new_state;
+        }
     }
 
     // if interrupt has set the 1 second flag

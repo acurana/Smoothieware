@@ -9,7 +9,6 @@
 class Pwm : public Module, public Pin {
 public:
     Pwm();
-    Pwm(bool hwpwm); // use this constructor to enable HW PWM
 
     void     on_module_load(void);
     uint32_t on_tick(uint32_t);
@@ -21,12 +20,16 @@ public:
     int      get_pwm() const { return _pwm; }
     void     set(bool);
 
+    void set_hw_pwm(bool on);
+
 private:
     int  _max;
     int  _pwm;
     int  _sd_accumulator;
     bool _sd_direction;
+
     mbed::PwmOut* hw_pwm;
+    bool inverted;          // set if pwm output is inverted
 };
 
 #endif /* _PWM_H */

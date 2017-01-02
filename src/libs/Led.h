@@ -17,6 +17,7 @@
 
 #include <stdint.h>
 #include "libs/Pin.h"
+#include "Multiplexer.h"
 
 
 class Led {
@@ -27,8 +28,34 @@ public:
     // Load config parameters using provided "base" names.
     virtual void UpdateConfig(uint16_t module_checksum, uint16_t name_checksum);
 
+    /*
+     * both operators = are not atomic. May cause race conditions.
+     * Currently only used from slow_ticker IRQ, should be safe
+     */
     Led& operator=(const int& other) { led_pin.set(other); return *this; };
-    Led& operator=(int& other) {led_pin.set(other); return *this; }
+    Led& operator=(int& other) {led_pin.set(other); return *this; };
+
+    /*
+     * will not write to pin if pin is multiplexed. In this case the bit write
+     * will be atomic to the data cache only to avoid race conditions
+     */
+    Led& set_bit_atomic(const int& other)
+    {
+        Multiplexer* const mpx = led_pin.get_mpx_ptr(); // get the assigned mpxer, if any
+
+        if (mpx) {
+            uint8_t const mpx_idx = led_pin.get_mpx_index(); // get index of pin in mpxer
+            std::atomic_uint_fast16_t* const data_ptr = mpx->data_ptr(); // get ptr to mpx cached data
+            if (other)
+                *data_ptr |= (uint16_t)(1 << mpx_idx);
+            else
+                *data_ptr &= (~(uint16_t)(1 << mpx_idx));
+        }
+        else
+            led_pin.set(other); return *this;
+
+        return *this;
+    };
 
     Pin led_pin;
 };

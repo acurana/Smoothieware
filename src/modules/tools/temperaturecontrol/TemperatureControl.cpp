@@ -69,6 +69,8 @@
 #define runaway_cooling_timeout_checksum   CHECKSUM("runaway_cooling_timeout")
 #define runaway_error_range_checksum       CHECKSUM("runaway_error_range")
 
+#define hwpwm_checksum                     CHECKSUM("hwpwm")
+
 TemperatureControl::TemperatureControl(uint16_t name, int index)
 {
     name_checksum= name;
@@ -165,11 +167,18 @@ void TemperatureControl::load_config()
     if(this->heater_pin.connected()){
         this->readonly= false;
         this->heater_pin.as_output();
-        this->heater_pin2.as_output();
+
+        if(this->heater_pin2.connected())   // set to output only if pin is specified in config
+            this->heater_pin2.as_output();
 
     } else {
         this->readonly= true;
     }
+
+    // HW PWM
+    this->hwpwm = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, hwpwm_checksum)->by_default(false)->as_bool();
+    if (this->hwpwm)
+        heater_pin.set_hw_pwm(true);
 
     // For backward compatibility, default to a thermistor sensor.
     std::string sensor_type = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, sensor_checksum)->by_default("thermistor")->as_string();

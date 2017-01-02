@@ -10,7 +10,7 @@
 // What ?
 
 Pwm::Pwm()
-    : hw_pwm(NULL)
+    : hw_pwm(NULL), inverted(false)
 {
     _max = PID_PWM_MAX - 1;
     _pwm = -1;
@@ -18,15 +18,22 @@ Pwm::Pwm()
     _sd_accumulator= 0;
 }
 
-Pwm::Pwm(bool hwpwm)
-    : Pwm()
+void Pwm::set_hw_pwm(bool on)
 {
-    if (hwpwm)
+    if (hw_pwm) {
+        delete (hw_pwm);
+        hw_pwm = NULL;
+    }
+
+    if (on)
         hw_pwm = hardware_pwm();
 }
 
 void Pwm::pwm(int new_pwm)
 {
+    if (inverted)
+        new_pwm = _max - new_pwm;
+
     _pwm = confine(new_pwm, 0, _max);
 }
 
@@ -45,7 +52,14 @@ int Pwm::max_pwm()
 void Pwm::set(bool value)
 {
     _pwm = -1;
-    Pin::set(value);
+
+    if (inverted)
+        value = !value;
+
+    if(hw_pwm)
+        hw_pwm->write(value ? 1.0 : 0.0 );   // use hw pwm if ptr is set
+    else
+        Pin::set(value);
 }
 
 uint32_t Pwm::on_tick(uint32_t dummy)

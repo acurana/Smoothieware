@@ -57,6 +57,7 @@ class SlowTicker : public Module{
         uint32_t interval;
 
         Pin ispbtn;
+        bool led_state;             // to save the led state
 protected:
     int flag_1s_count;
     volatile int flag_1s_flag;

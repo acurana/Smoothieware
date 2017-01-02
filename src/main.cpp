@@ -273,18 +273,41 @@ void init() {
     THEKERNEL->slow_ticker->start();
 }
 
+
+uint32_t elapsed_time_us(uint32_t old_timestamp)
+{
+    uint32_t new_timestamp = us_ticker_read();
+
+    if (new_timestamp >= old_timestamp)
+        return new_timestamp - old_timestamp;
+    else
+        return UINT32_MAX - old_timestamp + new_timestamp + 1;
+}
+
+
 int main()
 {
     init();
 
     uint16_t cnt= 0;
+    bool led_state = 0;             // to save the led state
+    uint32_t timestamp;             // for led blinking time
+
+    timestamp = us_ticker_read();
+
     // Main loop
     while(1){
-        if(THEKERNEL->is_using_leds()) {
-            // flash led 2 to show we are alive
-            leds[1]= (cnt++ & 0x1000) ? 1 : 0;
-        }
+
         THEKERNEL->call_event(ON_MAIN_LOOP);
         THEKERNEL->call_event(ON_IDLE);
+
+        // flash led 2 to show we are alive
+        if(THEKERNEL->is_using_leds()) {
+            if (elapsed_time_us(timestamp) > 100000) {
+                leds[1].set_bit_atomic(led_state = ! led_state); // leds are updated in HW by slow ticker
+                timestamp = us_ticker_read(); // update timestamp
+            }
+        }
     }
 }
+

@@ -18,6 +18,7 @@ private:
     Pin  led;
     struct {
         uint8_t cnt:4;
+        uint8_t led_state:1;
     };
 };
 

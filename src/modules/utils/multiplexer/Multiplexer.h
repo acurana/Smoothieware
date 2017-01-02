@@ -17,6 +17,7 @@
 
 #include "libs/Pin.h"
 #include "checksumm.h"
+#include <atomic>
 
 #define clock_pin_checksum          CHECKSUM("clock_pin")
 #define data_pin_checksum           CHECKSUM("data_pin")
@@ -76,6 +77,13 @@ public:
     }
 
     /*
+     * \return a pointer to the data cache
+     */
+    inline std::atomic_uint_fast16_t* data_ptr(void) {
+        return &data;
+    }
+
+    /*
      * set data bit in cache as per current index
      */
     virtual void set_data(bool bit);
@@ -99,7 +107,7 @@ protected:
     uint8_t index;          // current index
     uint8_t channels;       // num channels, currently limited to 8
     uint16_t active_chan;    // bit coded active channels
-    uint16_t data;          // data cache for output bits
+    std::atomic_uint_fast16_t data; // data cache for output bits
 
     /*
      * used as clock/data/load pins or as channel index
