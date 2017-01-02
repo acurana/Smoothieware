@@ -18,7 +18,9 @@
 #define play_led_pin_checksum       CHECKSUM("play_led_pin")
 #define play_led_disable_checksum   CHECKSUM("play_led_disable")
 
-PlayLed::PlayLed() {
+PlayLed::PlayLed()
+    : led_state(0)
+{
     cnt= 0;
 }
 
@@ -46,15 +48,31 @@ void PlayLed::on_config_reload(void *argument)
 
 uint32_t PlayLed::led_tick(uint32_t)
 {
+    /*
+     * LED is flashing quickly if kernel was halted
+     */
     if(THEKERNEL->is_halted()) {
-        led.set(!led.get());
-        return 0;
+        led.set(led_state = ! led_state);
     }
+    else
 
+    /*
+     * constant on if idle
+     */
+    if (THECONVEYOR->is_idle()) {
+        if (! led_state)
+            led.set(led_state = true);
+    }
+    else
+
+    /*
+     * blinking slowly if working
+     */
     if(++cnt >= 6) { // 6 ticks ~ 500ms
         cnt= 0;
-        led.set(!THECONVEYOR->is_idle());
+        led.set(led_state = ! led_state);
     }
 
     return 0;
 }
+
