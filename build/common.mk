@@ -145,6 +145,7 @@ DEPFILES = $(patsubst %.o,%.d,$(OBJECTS))
 
 # Linker script to be used.  Indicates what code should be placed where in memory.
 LSCRIPT=$(MBED_DIR)/$(DEVICE)/GCC_ARM/$(DEVICE).ld
+#LSCRIPT=/home/chris/workspace-smoothieware/Smoothieware/LPC1768-addr-0x00000.ld
 
 # Location of external library and header dependencies.
 MBED_DIR = $(BUILD_DIR)/../mbed/drop
