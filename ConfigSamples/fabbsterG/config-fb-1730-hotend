@@ -10,9 +10,9 @@ mm_max_arc_error                             0.01             # The maximum erro
                                                               # coordinates robots ).
 
 # Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
-alpha_steps_per_mm                           91.4285714285714 # Steps per mm for alpha stepper
-beta_steps_per_mm                            91.4285714285714 # Steps per mm for beta stepper
-gamma_steps_per_mm                           613.851428571429 # Steps per mm for gamma stepper, insane but accurate
+alpha_steps_per_mm                           92.3520923520923 # old 91.4285714285714 Steps per mm for alpha stepper
+beta_steps_per_mm                            92.3520923520923 # old 91.4285714285714 Steps per mm for beta stepper
+gamma_steps_per_mm                           616.162036207206 # old 613.851428571429 Steps per mm for gamma stepper, insane but accurate
 
 # Planner module configuration : Look-ahead and acceleration configuration
 planner_queue_size                           32               # DO NOT CHANGE THIS UNLESS YOU KNOW EXACTLY WHAT YOU ARE DOING
@@ -136,7 +136,7 @@ multiplexer.mpx_m4.load_data_pin             2.1              #
 
 ## Extruder module configuration
 extruder.hotend.enable                       true             # Whether to activate the extruder module at all. All configuration is ignored if false
-extruder.hotend.steps_per_mm                 900              # Steps per mm for extruder stepper
+extruder.hotend.steps_per_mm                 745.1251         # 1,75mm filament, was 900 (3mm), Steps per mm for extruder stepper
 extruder.hotend.default_feed_rate            200              # was 600, Default rate ( mm/minute ) for moves where only the extruder moves
 extruder.hotend.acceleration                 500              # Acceleration for the stepper motor mm/sec²
 extruder.hotend.max_speed                    50               # mm/s
@@ -200,7 +200,7 @@ temperature_control.hotend.enable            true             # Whether to activ
                                                               # All configuration is ignored if false.
 temperature_control.hotend.thermistor_pin    0.3m.1.5         # Port 0, pin 3, multiplexed, multiplexer type 1 (4051), channel 5
 temperature_control.hotend.ref_pin           0.2              # Port 0, pin 2, fabbster LM35 ref volt.
-temperature_control.hotend.corr_fact         660              # linear corr. factor from heater wire to nozzle temperature *1000
+temperature_control.hotend.corr_fact         875              # linear corr. factor from heater wire to nozzle temperature *1000
 temperature_control.hotend.heater_pin        2.6!             # Pin that controls the heater, set to nc if a readonly thermistor is being defined
 temperature_control.hotend.sensor            th_cp_k_amp_200  # fabbster uses a thermocouple with an internal 2nd thermocouple for correction, amplified, factor 200
 #temperature_control.hotend.thermistor        EPCOS100K        # See http://smoothieware.org/temperaturecontrol#toc5
@@ -268,11 +268,12 @@ switch.fan.output_pin                        2.4!             #
 switch.fan.output_type                       pwm              # pwm output settable with S parameter in the input_on_comand
 #switch.fan.max_pwm                           255              # set max pwm for the pin default is 255
 
-#switch.misc.enable                           true             #
-#switch.misc.input_on_command                 M42              #
-#switch.misc.input_off_command                M43              #
-#switch.misc.output_pin                       2.4              #
-#switch.misc.output_type                      digital          # just an on or off pin
+## 1730 hotend heat sink fan, permanently on
+switch.misc.enable                           true             #
+switch.misc.input_on_command                 M42              #
+switch.misc.input_off_command                M43              #
+switch.misc.output_pin                       2.12m.3.6        # fabbster Q5, not inverted, on when powered on 
+switch.misc.output_type                      digital          # just an on or off pin
 
 # Switch module for spindle control
 #switch.spindle.enable                        false            #
@@ -293,12 +294,12 @@ endstops_enable                              true             # the endstop modu
 alpha_min_endstop                            2.0m.4.5         # add a ! to invert if endstop is NOT connected to ground
 alpha_max_endstop                            nc               # NOTE set to nc if this is not installed
 alpha_homing_direction                       home_to_min      # or set to home_to_max and set alpha_max
-alpha_min                                    -8.0             # this gets loaded after homing when home_to_min is set
+alpha_min                                    -1.0             # this gets loaded after homing when home_to_min is set
 alpha_max                                    0                # this gets loaded after homing when home_to_max is set
 beta_min_endstop                             2.0m.4.6         # multiplexed on fabbster
 beta_max_endstop                             nc               #
 beta_homing_direction                        home_to_min      #
-beta_min                                     -17.0            #
+beta_min                                     -51.0            #
 beta_max                                     0                #
 gamma_min_endstop                            nc               #
 gamma_max_endstop                            2.0m.4.7         # multiplexed on fabbster
@@ -348,21 +349,21 @@ endstop_debounce_ms                          5                # uncomment if you
 ## Z-probe
 zprobe.enable                                true             # set to true to enable a zprobe
 zprobe.probe_pin                             2.0!m.4.2        # pin probe is attached to if NC remove the !
-zprobe.slow_feedrate                         5                # mm/sec probe feed rate
+zprobe.slow_feedrate                         1                # was 5, mm/sec probe feed rate
 #zprobe.debounce_count                       100               # set if noisy
 zprobe.debounce_ms                           5                # needed for fabbster
 zprobe.fast_feedrate                         100              # move feedrate mm/sec
-zprobe.probe_height                          15               # how much above bed to start probe
+zprobe.probe_height                          10               # how much above bed to start probe
 #gamma_min_endstop                            nc               # normally 1.28. Change to nc to prevent conflict,
 
 # associated with zprobe the leveling strategy to use
 leveling-strategy.three-point-leveling.enable        true        # a leveling strategy that probes three points to define a plane and keeps the Z parallel to that plane
-leveling-strategy.three-point-leveling.point1        110.0,40.0  # the first probe point (x,y) optional may be defined with M557
-leveling-strategy.three-point-leveling.point2        40.0,180.0  # the second probe point (x,y)
-leveling-strategy.three-point-leveling.point3        180.0,180.0 # the third probe point (x,y)
+leveling-strategy.three-point-leveling.point1        110.0,50.0  # the first probe point (x,y) optional may be defined with M557
+leveling-strategy.three-point-leveling.point2        50.0,150.0  # the second probe point (x,y)
+leveling-strategy.three-point-leveling.point3        170.0,150.0 # the third probe point (x,y)
 leveling-strategy.three-point-leveling.home_first    false       # home the XY axis before probing
 #leveling-strategy.three-point-leveling.tolerance     0.03        # the probe tolerance in mm, anything less that this will be ignored, default is 0.03mm
-leveling-strategy.three-point-leveling.probe_offsets 0,-14.0,0   # the probe offsets from nozzle, must be x,y,z, default is no offset
+leveling-strategy.three-point-leveling.probe_offsets -28.0,-25.0,0   # the probe offsets from nozzle, must be x,y,z, default is no offset
 leveling-strategy.three-point-leveling.save_plane    true        # set to true to allow the bed plane to be saved with M500 default is false
 
 ## Panel

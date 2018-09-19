@@ -293,12 +293,12 @@ endstops_enable                              true             # the endstop modu
 alpha_min_endstop                            2.0m.4.5         # add a ! to invert if endstop is NOT connected to ground
 alpha_max_endstop                            nc               # NOTE set to nc if this is not installed
 alpha_homing_direction                       home_to_min      # or set to home_to_max and set alpha_max
-alpha_min                                    -8.0             # this gets loaded after homing when home_to_min is set
+alpha_min                                    -5               # this gets loaded after homing when home_to_min is set
 alpha_max                                    0                # this gets loaded after homing when home_to_max is set
 beta_min_endstop                             2.0m.4.6         # multiplexed on fabbster
 beta_max_endstop                             nc               #
 beta_homing_direction                        home_to_min      #
-beta_min                                     -17.0            #
+beta_min                                     -50              #
 beta_max                                     0                #
 gamma_min_endstop                            nc               #
 gamma_max_endstop                            2.0m.4.7         # multiplexed on fabbster
