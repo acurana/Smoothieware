@@ -132,7 +132,7 @@ float Thermocouple::adc_value_to_temperature(uint32_t adc)
      */
 
     int_res = THCP_K_REF_V * adc * 1229; // [mV*10] now 10mV/°C * 10
-    int_res = int_res / 4095; // not oversampled !!! 4095
+    int_res = int_res / max_adc_value;
 
     //int_res *= 660; // correction factor to get the temperature at the nozzle
     int_res = int_res * correction_factor / 1000;
