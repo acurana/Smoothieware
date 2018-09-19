@@ -1,0 +1,21 @@
+
+Multiplexed Pins (digital)
+================
+
+- Motor enable pins (incl. extruder motor)
+
+- All LEDs
+
+- Bed Heater Pin 1 + 2
+
+- All endstops
+
+- Z-probe pin
+
+
+Multiplexed Pins (analogue)
+================
+
+- Hotend thermistor pin
+- Bed thermistor pin
+
