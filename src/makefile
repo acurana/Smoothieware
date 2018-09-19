@@ -76,6 +76,8 @@ export EXCLUDE_MODULES = tools/filamentdetector tools/scaracal tools/temperature
 else
 # 3D build excludes these
 export EXCLUDE_MODULES = tools/drillingcycles tools/spindle
+#export EXCLUDE_MODULES = tools/drillingcycles tools/spindle tools/rotarydeltacalibration tools/laser tools/temperatureswitch tools/scaracal utils/motordrivercontrol
+
 endif
 
 endif
