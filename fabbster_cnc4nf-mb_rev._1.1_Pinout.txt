@@ -1,0 +1,78 @@
+**************************************************
+todo:
+- finalize this and add the missing pins 
+**************************************************
+
+
+Fabbster CPU Board Pinout 
+=========================
+
+
+LPC1768 / IC Pin    cnc4nf-mb rev .1.1 Pin    Pin Assignment    Comment
+=======================================================================
+
+cnc4nf-mb rev. 1.1 - on board connectors
+========================================
+U6.15               P11.C2                    -                 multiplexed analogue channel on HEF4051 analogue mpxer U6
+U6.14               P11.C1                    -                 dto.
+U6.13               P11.C0                    -                 dto.
+U6.12               P11.C3                    -                 dto.
+U6.1                P11.C4                    -                 dto.
+U6.2                P11.C6                    -                 dto.
+U6.4                P11.C7                    -                 dto.
+U6.5                P11.C5                    -                 dto.
+U9.2                P11.REF                   -                 reference thermo couple input, via 1k resistor
+U10.11              P9.8                      -                 multiplexed inputs, via 1k, 10k pull down, 74HC165
+U10.12              P9.7                      -                 dto.
+U10.13              P9.6                      -                 dto.
+U10.14              P9.5                      -                 dto.
+U10.3               P9.4                      -                 dto.
+U10.4               P9.3                      -                 dto.
+U10.5               P9.2                      -                 dto.
+U10.6               P9.1                      -                 dto.
+P2.10               P4                        ISP               via 100R to processor pin   
+todo                    P3          *****
+todo                    P2          *****
+todo                    P1          *****
+U3.4                Q1                        -                 multiplexed output, 74HC595 
+U3.5                Q3                        -                 dto.
+U3.6                Q5                        -                 dto.
+U3.7                Q7                        -                 dto.
+P1.20               Q9                        PWM1[2]           directly to processor pin
+U3.3                Q11                       -                 multiplexed output, 74HC595
+P2.6                Q13                       -                 directly to processor pin
+P2.4                Q15                       PWM1[5]           dto.
+U7.7                ENABLE8                   -                 multiplexed enable pins on P10 and P12, 74HC595
+U7.6                ENABLE7                   -                 dto.
+U7.5                ENABLE6                   -                 dto.
+U7.4                ENABLE5                   -                 dto.
+U7.3                ENABLE4                   -                 dto.
+U7.2                ENABLE3                   -                 dto.
+U7.1                ENABLE2                   -                 dto.
+U7.15               ENABLE1                   -                 dto.
+P0.18               SPI.MOSI                  MOSI0             on board SD-card connector
+P0.17               SPI.MISO                  MISO0             dto.
+P0.15               SPI.SCK                   SCK0              dto.
+P0.16               SPI.SSEL                  SSEL0             dto.
+P0.29               USB.D+                    -                 USB port
+P0.30               USB.D-                    -                 dto.
+P2.11               S2                        -                 button
+U3.15               D1                        -                 LED
+U3.1                D2                        -                 dto.
+U3.2                D3                        -                 dto.
+
+cnc4nf-mb rev. 1.1 - other processor pins
+========================================
+           
+P0.3                -                         AD0[6]            U9.6 op amp output, multiplexed Cn temp sens input 
+P0.2                -                         AD0[7]            U11 (LM35 temp. sens. on board)
+
+P1.x
+
+P2.x
+
+P3.x
+
+P4.28               P12.12                    TXD3              UART TxD
+P4.29               P12.17                    RXD3              UART RxD
+        
