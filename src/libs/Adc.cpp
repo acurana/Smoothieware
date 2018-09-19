@@ -12,7 +12,8 @@
 #include "libs/ADC/adc.h"
 #include "libs/Pin.h"
 #include "libs/Median.h"
-#include "AdcFilter.h"
+//#include "AdcFilter.h"
+#include "AdcFiltMedOvers.h"
 
 #include <cstring>
 #include <algorithm>
@@ -81,7 +82,7 @@ void Adc::enable_pin(Pin *pin)
         // assign filter to multiplexer and clear smpl counter
         __disable_irq();
 
-        mp->pointer(midx) = (void*) new AdcFilter;
+        mp->pointer(midx) = (void*) new AdcFiltMedOvers/*AdcFilter*/;
         mp->counter(midx) = 0;
 
         // store the multiplexer here in Adc
@@ -122,7 +123,7 @@ void Adc::new_sample(int chan, uint32_t value)
              * mpxer chan does not have a filter assigned yet. So we
              * need to protect the ptr access
              */
-            AdcFilter* & filt = (AdcFilter* &)mpxer[chan]->pointer(mpx_idx);
+            AdcFiltMedOvers/*AdcFilter*/* & filt = (AdcFiltMedOvers/*AdcFilter*/* &)mpxer[chan]->pointer(mpx_idx);
             if (filt)
                 filt->write(adc);
 
@@ -226,7 +227,7 @@ uint16_t Adc::read_mpx (Pin *pin)
         uint16_t res;
 
         int mpidx = pin->get_mpx_index();
-        AdcFilter* & filt = (AdcFilter* &)mpxer[chan]->pointer(mpidx);
+        AdcFiltMedOvers/*AdcFilter*/* & filt = (AdcFiltMedOvers/*AdcFilter*/* &)mpxer[chan]->pointer(mpidx);
         res = filt->read();
 
         return res;
