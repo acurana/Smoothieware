@@ -18,7 +18,9 @@ StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en, Pin &m1, Pin &m2, Pin &
 {
     change_microsteps(1); // initially set to full steps
 
-    set_high_on_debug(en.port_number, en.pin);
+    if(en.connected()) {
+        set_high_on_debug(en.port_number, en.pin);
+    }
 
     steps_per_mm         = 1.0F;
     max_rate             = 50.0F;
@@ -33,7 +35,7 @@ StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en, Pin &m1, Pin &m2, Pin &
 
     enable(false);
     unstep(); // initialize step pin
-    set_direction(false); // initialize dor pin
+    set_direction(false); // initialize dir pin
 
     this->register_for_event(ON_HALT);
     this->register_for_event(ON_ENABLE);

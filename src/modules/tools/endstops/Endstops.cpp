@@ -202,6 +202,9 @@ bool Endstops::load_old_config()
     // if no pins defined then disable the module
     if(endstops.empty()) return false;
 
+    homing_axis.shrink_to_fit();
+    endstops.shrink_to_fit();
+
     get_global_configs();
 
     if(limit_enabled) {
@@ -228,6 +231,7 @@ bool Endstops::load_old_config()
 bool Endstops::load_config()
 {
     bool limit_enabled= false;
+    size_t max_index= 0;
 
     std::array<homing_info_t, k_max_actuators> temp_axis_array; // needs to be at least XYZ, but allow for ABC
     {
@@ -273,6 +277,17 @@ bool Endstops::load_config()
                 continue;
         }
 
+        // check we are not going above the number of defined actuators/axis
+        if(i >= THEROBOT->get_number_registered_motors()) {
+            // too many axis we only have configured n_motors
+            THEKERNEL->streams->printf("ERROR: endstop %d is greater than number of defined motors. Endstops disabled\n", i);
+            delete pin_info;
+            return false;
+        }
+
+        // keep track of the maximum index that has been defined
+        if(i > max_index) max_index= i;
+
         // init pin struct
         pin_info->debounce= 0;
         pin_info->axis= toupper(axis[0]);
@@ -284,12 +299,6 @@ bool Endstops::load_config()
 
         // enter into endstop array
         endstops.push_back(pin_info);
-
-        // check we are not going above the number of defined actuators/axis
-        if(i >= k_max_actuators) {
-            // too many axis we only have configured k_max_actuators
-            continue;
-        }
 
         // if set to none it means not used for homing (maybe limit only) so do not add to the homing array
         string direction= THEKERNEL->config->value(endstop_checksum, cs, direction_checksum)->by_default("none")->as_string();
@@ -330,7 +339,8 @@ bool Endstops::load_config()
     // if no pins defined then disable the module
     if(endstops.empty()) return false;
 
-    // copy to the homing_axis array
+    // copy to the homing_axis array, make sure that undefined entries are filled in as well
+    // as the order is important and all slots must be filled upto the max_index
     for (size_t i = 0; i < temp_axis_array.size(); ++i) {
         if(temp_axis_array[i].axis == 0) {
             // was not configured above, if it is XYZ then we need to force a dummy entry
@@ -340,12 +350,24 @@ bool Endstops::load_config()
                 t.axis_index= i;
                 t.pin_info= nullptr; // this tells it that it cannot be used for homing
                 homing_axis.push_back(t);
+
+            }else if(i <= max_index) {
+                // for instance case where we defined C without A or B
+                homing_info_t t;
+                t.axis= 'A' + i;
+                t.axis_index= i;
+                t.pin_info= nullptr; // this tells it that it cannot be used for homing
+                homing_axis.push_back(t);
             }
 
         }else{
             homing_axis.push_back(temp_axis_array[i]);
         }
     }
+
+    // saves some memory
+    homing_axis.shrink_to_fit();
+    endstops.shrink_to_fit();
 
     // sets some endstop global configs applicable to all endstops
     get_global_configs();
@@ -440,7 +462,11 @@ void Endstops::on_idle(void *argument)
             // check min and max endstops
             if(debounced_get(&i->pin)) {
                 // endstop triggered
-                THEKERNEL->streams->printf("Limit switch %c was hit - reset or M999 required\n", i->axis);
+                if(!THEKERNEL->is_grbl_mode()) {
+                    THEKERNEL->streams->printf("Limit switch %c%c was hit - reset or M999 required\n", STEPPER[i->axis_index]->which_direction() ? '-' : '+', i->axis);
+                }else{
+                    THEKERNEL->streams->printf("ALARM: Hard limit %c%c\n", STEPPER[i->axis_index]->which_direction() ? '-' : '+', i->axis);
+                }
                 this->status = LIMIT_TRIGGERED;
                 i->debounce= 0;
                 // disables heaters and motors, ignores incoming Gcode and flushes block queue
@@ -463,18 +489,18 @@ void Endstops::back_off_home(axis_bitmap_t axis)
     // these are handled differently
     if(is_delta) {
         // Move off of the endstop using a regular relative move in Z only
-        params.push_back({'Z', homing_axis[Z_AXIS].retract * (homing_axis[Z_AXIS].home_direction ? 1 : -1)});
+        params.push_back({'Z', THEROBOT->from_millimeters(homing_axis[Z_AXIS].retract * (homing_axis[Z_AXIS].home_direction ? 1 : -1))});
         slow_rate= homing_axis[Z_AXIS].slow_rate;
 
     } else {
-        // cartesians, concatenate all the moves we need to do into one gcode
+        // cartesians concatenate all the moves we need to do into one gcode
         for( auto& e : homing_axis) {
             if(!axis[e.axis_index]) continue; // only for axes we asked to move
 
             // if not triggered no need to move off
             if(e.pin_info != nullptr && e.pin_info->limit_enable && debounced_get(&e.pin_info->pin)) {
                 char ax= e.axis;
-                params.push_back({ax, e.retract * (e.home_direction ? 1 : -1)});
+                params.push_back({ax, THEROBOT->from_millimeters(e.retract * (e.home_direction ? 1 : -1))});
                 // select slowest of them all
                 slow_rate= isnan(slow_rate) ? e.slow_rate : std::min(slow_rate, e.slow_rate);
             }
@@ -485,12 +511,11 @@ void Endstops::back_off_home(axis_bitmap_t axis)
         // Move off of the endstop using a regular relative move
         params.insert(params.begin(), {'G', 0});
         // use X slow rate to move, Z should have a max speed set anyway
-        params.push_back({'F', slow_rate * 60.0F});
+        params.push_back({'F', THEROBOT->from_millimeters(slow_rate * 60.0F)});
         char gcode_buf[64];
         append_parameters(gcode_buf, params, sizeof(gcode_buf));
         Gcode gc(gcode_buf, &(StreamOutput::NullStream));
         THEROBOT->push_state();
-        THEROBOT->inch_mode = false;     // needs to be in mm
         THEROBOT->absolute_mode = false; // needs to be relative mode
         THEROBOT->on_gcode_received(&gc); // send to robot directly
         // Wait for above to finish
@@ -510,14 +535,12 @@ void Endstops::move_to_origin(axis_bitmap_t axis)
     // float pos[3]; THEROBOT->get_axis_position(pos); if(pos[0] == 0 && pos[1] == 0) return;
 
     this->status = MOVE_TO_ORIGIN;
-    // Move to center using a regular move, use slower of X and Y fast rate
-    //float rate = std::min(this->fast_rates[0], this->fast_rates[1]) * 60.0F;
+    // Move to center using a regular move, use slower of X and Y fast rate in mm/sec
+    float rate = std::min(homing_axis[X_AXIS].fast_rate, homing_axis[Y_AXIS].fast_rate) * 60.0F;
     char buf[32];
     THEROBOT->push_state();
-    THEROBOT->inch_mode = false;     // needs to be in mm
     THEROBOT->absolute_mode = true;
-    //snprintf(buf, sizeof(buf), "G53 G0 X0 Y0 F%1.4f", rate); // must use machine coordinates in case G92 or WCS is in effect
-    snprintf(buf, sizeof(buf), "G53 G0 X0 Y0"); // must use machine coordinates in case G92 or WCS is in effect
+    snprintf(buf, sizeof(buf), "G53 G0 X0 Y0 F%1.4f", THEROBOT->from_millimeters(rate)); // must use machine coordinates in case G92 or WCS is in effect
     struct SerialMessage message;
     message.message = buf;
     message.stream = &(StreamOutput::NullStream);
@@ -557,6 +580,7 @@ uint32_t Endstops::read_endstops(uint32_t dummy)
                         // we signal the motor to stop, which will preempt any moves on that axis
                         STEPPER[m]->stop_moving();
                     }
+                    e.pin_info->triggered= true;
                 }
 
             } else {
@@ -601,6 +625,7 @@ void Endstops::home(axis_bitmap_t a)
     // reset debounce counts for all endstops
     for(auto& e : endstops) {
        e->debounce= 0;
+       e->triggered= false;
     }
 
     if (is_scara) {
@@ -643,12 +668,34 @@ void Endstops::home(axis_bitmap_t a)
         }
     }
 
+    // check that the endstops were hit and it did not stop short for some reason
+    // if the endstop is not triggered then enter ALARM state
+    // with deltas we check all three axis were triggered, but at least one of XYZ must be set to home
+    if(axis_to_home[X_AXIS] || axis_to_home[Y_AXIS] || axis_to_home[Z_AXIS]) {
+        for (size_t i = X_AXIS; i <= Z_AXIS; ++i) {
+            if((axis_to_home[i] || this->is_delta || this->is_rdelta) && !homing_axis[i].pin_info->triggered) {
+                this->status = NOT_HOMING;
+                THEKERNEL->call_event(ON_HALT, nullptr);
+                return;
+            }
+        }
+    }
 
-    // TODO: should check that the endstops were hit and it did not stop short for some reason
-    // we did not complete movement the full distance if we hit the endstops
-    // TODO Maybe only reset axis involved in the homing cycle
-    // Only for non polar bots
+    // also check ABC
+    if(homing_axis.size() > 3){
+        for (size_t i = A_AXIS; i < homing_axis.size(); ++i) {
+            if(axis_to_home[i] && !homing_axis[i].pin_info->triggered) {
+                this->status = NOT_HOMING;
+                THEKERNEL->call_event(ON_HALT, nullptr);
+                return;
+            }
+        }
+    }
+
     if (!is_scara) {
+        // Only for non polar bots
+        // we did not complete movement the full distance if we hit the endstops
+        // TODO Maybe only reset axis involved in the homing cycle
         THEROBOT->reset_position_from_current_actuator_position();
     }
 
@@ -687,7 +734,6 @@ void Endstops::home(axis_bitmap_t a)
     // wait until finished
     THECONVEYOR->wait_for_idle();
 
-    // TODO: should check that the endstops were hit and it did not stop short for some reason
     // we did not complete movement the full distance if we hit the endstops
     // TODO Maybe only reset axis involved in the homing cycle
     THEROBOT->reset_position_from_current_actuator_position();
@@ -710,16 +756,16 @@ void Endstops::process_home_command(Gcode* gcode)
     THEROBOT->compensationTransform= nullptr;
 
     // deltas always home Z axis only, which moves all three actuators
-    bool home_in_z = this->is_delta || this->is_rdelta;
+    bool home_in_z_only = this->is_delta || this->is_rdelta;
 
     // figure out which axis to home
     axis_bitmap_t haxis;
     haxis.reset();
 
-    if(!home_in_z) { // ie not a delta
-        bool axis_speced = (gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') ||
-                            gcode->has_letter('A') || gcode->has_letter('B') || gcode->has_letter('C'));
+    bool axis_speced = (gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') ||
+                        gcode->has_letter('A') || gcode->has_letter('B') || gcode->has_letter('C'));
 
+    if(!home_in_z_only) { // ie not a delta
         for (auto &p : homing_axis) {
             // only enable homing if the endstop is defined,
             if(p.pin_info == nullptr) continue;
@@ -736,10 +782,26 @@ void Endstops::process_home_command(Gcode* gcode)
         }
 
     } else {
-        // Only Z axis homes (even though all actuators move this is handled by arm solution)
-        haxis.set(Z_AXIS);
-        // we also set the kinematics to a known good position, this is necessary for a rotary delta, but doesn't hurt for linear delta
-        THEROBOT->reset_axis_position(0, 0, 0);
+        bool home_z= !axis_speced || gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z');
+
+        // if we specified an axis we check ABC
+        for (size_t i = A_AXIS; i < homing_axis.size(); ++i) {
+            auto &p= homing_axis[i];
+            if(p.pin_info == nullptr) continue;
+            if(!axis_speced || gcode->has_letter(p.axis)) haxis.set(p.axis_index);
+        }
+
+        if(home_z){
+            // Only Z axis homes (even though all actuators move this is handled by arm solution)
+            haxis.set(Z_AXIS);
+            // we also set the kinematics to a known good position, this is necessary for a rotary delta, but doesn't hurt for linear delta
+            THEROBOT->reset_axis_position(0, 0, 0);
+        }
+    }
+
+    if(haxis.none()) {
+        THEKERNEL->streams->printf("WARNING: Nothing to home\n");
+        return;
     }
 
     // do the actual homing
@@ -778,17 +840,19 @@ void Endstops::process_home_command(Gcode* gcode)
     // restore compensationTransform
     THEROBOT->compensationTransform= savect;
 
-    // check if on_halt (eg kill)
+    // check if on_halt (eg kill or fail)
     if(THEKERNEL->is_halted()) {
         if(!THEKERNEL->is_grbl_mode()) {
-            THEKERNEL->streams->printf("Homing cycle aborted by kill\n");
+            THEKERNEL->streams->printf("ERROR: Homing cycle failed - check the max_travel settings\n");
+        }else{
+            THEKERNEL->streams->printf("ALARM: Homing fail\n");
         }
         // clear all the homed flags
         for (auto &p : homing_axis) p.homed= false;
         return;
     }
 
-    if(home_in_z || is_scara) { // deltas and scaras only
+    if(home_in_z_only || is_scara) { // deltas and scaras only
         // Here's where we would have been if the endstops were perfectly trimmed
         // NOTE on a rotary delta home_offset is actuator position in degrees when homed and
         // home_offset is the theta offset for each actuator, so M206 is used to set theta offset for each actuator in degrees
@@ -829,8 +893,20 @@ void Endstops::process_home_command(Gcode* gcode)
             }
         }
 
-        // for deltas we say all axis are homed even though it was only Z
-        for (auto &p : homing_axis) p.homed= true;
+        // for deltas we say all 3 axis are homed even though it was only Z
+        homing_axis[X_AXIS].homed= true;
+        homing_axis[Y_AXIS].homed= true;
+        homing_axis[Z_AXIS].homed= true;
+
+        // if we also homed ABC then we need to reset them
+        for (size_t i = A_AXIS; i < homing_axis.size(); ++i) {
+            auto &p= homing_axis[i];
+            if (haxis[p.axis_index]) { // if we requested this axis to home
+                THEROBOT->reset_axis_position(p.homing_position + p.home_offset, p.axis_index);
+                // set flag indicating axis was homed, it stays set once set until H/W reset or unhomed
+                p.homed= true;
+            }
+        }
 
     } else {
         // Zero the ax(i/e)s position, add in the home offset
@@ -853,7 +929,7 @@ void Endstops::process_home_command(Gcode* gcode)
         // if limit switches are enabled we must back off endstop after setting home
         back_off_home(haxis);
 
-    } else if(this->move_to_origin_after_home || homing_axis[X_AXIS].pin_info->limit_enable) {
+    } else if(haxis[Z_AXIS] && (this->move_to_origin_after_home || homing_axis[X_AXIS].pin_info->limit_enable)) {
         // deltas are not left at 0,0 because of the trim settings, so move to 0,0 if requested, but we need to back off endstops first
         // also need to back off endstops if limits are enabled
         back_off_home(haxis);
@@ -901,10 +977,9 @@ void Endstops::handle_park(Gcode * gcode)
 {
     // TODO: spec says if XYZ specified move to them first then move to MCS of specifed axis
     THEROBOT->push_state();
-    THEROBOT->inch_mode = false;     // needs to be in mm
     THEROBOT->absolute_mode = true;
     char buf[32];
-    snprintf(buf, sizeof(buf), "G53 G0 X%f Y%f", saved_position[X_AXIS], saved_position[Y_AXIS]); // must use machine coordinates in case G92 or WCS is in effect
+    snprintf(buf, sizeof(buf), "G53 G0 X%f Y%f", THEROBOT->from_millimeters(saved_position[X_AXIS]), THEROBOT->from_millimeters(saved_position[Y_AXIS])); // must use machine coordinates in case G92 or WCS is in effect
     struct SerialMessage message;
     message.message = buf;
     message.stream = &(StreamOutput::NullStream);
@@ -949,6 +1024,7 @@ void Endstops::on_gcode_received(void *argument)
             case 3: // G28.3 is a smoothie special it sets manual homing
                 if(gcode->get_num_args() == 0) {
                     for (auto &p : homing_axis) {
+                        if(p.pin_info == nullptr) continue; // ignore if not a homing endstop
                         p.homed= true;
                         THEROBOT->reset_axis_position(0, p.axis_index);
                     }
@@ -957,9 +1033,9 @@ void Endstops::on_gcode_received(void *argument)
                     if(gcode->has_letter('X')){ THEROBOT->reset_axis_position(gcode->get_value('X'), X_AXIS); homing_axis[X_AXIS].homed= true; }
                     if(gcode->has_letter('Y')){ THEROBOT->reset_axis_position(gcode->get_value('Y'), Y_AXIS); homing_axis[Y_AXIS].homed= true; }
                     if(gcode->has_letter('Z')){ THEROBOT->reset_axis_position(gcode->get_value('Z'), Z_AXIS); homing_axis[Z_AXIS].homed= true; }
-                    if(homing_axis.size() > A_AXIS && gcode->has_letter('A')){ THEROBOT->reset_axis_position(gcode->get_value('A'), A_AXIS); homing_axis[A_AXIS].homed= true; }
-                    if(homing_axis.size() > B_AXIS && gcode->has_letter('B')){ THEROBOT->reset_axis_position(gcode->get_value('B'), B_AXIS); homing_axis[B_AXIS].homed= true; }
-                    if(homing_axis.size() > C_AXIS && gcode->has_letter('C')){ THEROBOT->reset_axis_position(gcode->get_value('C'), C_AXIS); homing_axis[C_AXIS].homed= true; }
+                    if(homing_axis.size() > A_AXIS && homing_axis[A_AXIS].pin_info != nullptr && gcode->has_letter('A')){ THEROBOT->reset_axis_position(gcode->get_value('A'), A_AXIS); homing_axis[A_AXIS].homed= true; }
+                    if(homing_axis.size() > B_AXIS && homing_axis[B_AXIS].pin_info != nullptr && gcode->has_letter('B')){ THEROBOT->reset_axis_position(gcode->get_value('B'), B_AXIS); homing_axis[B_AXIS].homed= true; }
+                    if(homing_axis.size() > C_AXIS && homing_axis[C_AXIS].pin_info != nullptr && gcode->has_letter('C')){ THEROBOT->reset_axis_position(gcode->get_value('C'), C_AXIS); homing_axis[C_AXIS].homed= true; }
                 }
                 break;
 
@@ -988,6 +1064,7 @@ void Endstops::on_gcode_received(void *argument)
 
             case 6: // G28.6 is a smoothie special it shows the homing status of each axis
                 for (auto &p : homing_axis) {
+                    if(p.pin_info == nullptr) continue; // ignore if not a homing endstop
                     gcode->stream->printf("%c:%d ", p.axis, p.homed);
                 }
                 gcode->add_nl= true;
@@ -1005,6 +1082,7 @@ void Endstops::on_gcode_received(void *argument)
         switch (gcode->m) {
             case 119: {
                 for(auto& h : homing_axis) {
+                    if(h.pin_info == nullptr) continue; // ignore if not a homing endstop
                     string name;
                     name.append(1, h.axis).append(h.home_direction ? "_min" : "_max");
                     gcode->stream->printf("%s:%d ", name.c_str(), h.pin_info->pin.get());
@@ -1022,10 +1100,12 @@ void Endstops::on_gcode_received(void *argument)
             case 206: // M206 - set homing offset
                 if(is_rdelta) return; // RotaryDeltaCalibration module will handle this
                 for (auto &p : homing_axis) {
+                    if(p.pin_info == nullptr) continue; // ignore if not a homing endstop
                     if (gcode->has_letter(p.axis)) p.home_offset= gcode->get_value(p.axis);
                 }
 
                 for (auto &p : homing_axis) {
+                    if(p.pin_info == nullptr) continue; // ignore if not a homing endstop
                     gcode->stream->printf("%c: %5.3f ", p.axis, p.home_offset);
                 }
 
@@ -1043,6 +1123,7 @@ void Endstops::on_gcode_received(void *argument)
                 if(!is_rdelta) {
                     gcode->stream->printf(";Home offset (mm):\nM206 ");
                     for (auto &p : homing_axis) {
+                        if(p.pin_info == nullptr) continue; // ignore if not a homing endstop
                         gcode->stream->printf("%c%1.2f ", p.axis, p.home_offset);
                     }
                     gcode->stream->printf("\n");
@@ -1113,6 +1194,13 @@ void Endstops::on_get_public_data(void* argument)
     } else if(pdr->second_element_is(get_homing_status_checksum)) {
         bool *homing = static_cast<bool *>(pdr->get_data_ptr());
         *homing = this->status != NOT_HOMING;
+        pdr->set_taken();
+
+    } else if(pdr->second_element_is(get_homed_status_checksum)) {
+        bool *homed = static_cast<bool *>(pdr->get_data_ptr());
+        for (int i = 0; i < 3; ++i) {
+            homed[i]= homing_axis[i].homed;
+        }
         pdr->set_taken();
     }
 }
