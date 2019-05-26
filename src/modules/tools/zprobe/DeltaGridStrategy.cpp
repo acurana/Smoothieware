@@ -240,6 +240,7 @@ bool DeltaGridStrategy::probe_grid(int n, float radius, StreamOutput *stream)
     float d = ((radius * 2) / (n - 1));
 
     for (int c = 0; c < n; ++c) {
+        std::string scanline;
         float y = -radius + d * c;
         for (int r = 0; r < n; ++r) {
             float x = -radius + d * r;
@@ -251,9 +252,11 @@ bool DeltaGridStrategy::probe_grid(int n, float radius, StreamOutput *stream)
                 if(!zprobe->doProbeAt(mm, x, y)) return false;
                 z = zprobe->getProbeHeight() - mm;
             }
-            stream->printf("%8.4f ", z);
+            char buf[16];
+            size_t n= snprintf(buf, sizeof(buf), "%8.4f ", z);
+            scanline.append(buf, n);
         }
-        stream->printf("\n");
+        stream->printf("%s\n", scanline.c_str());
     }
     return true;
 }
@@ -341,7 +344,9 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
                 remove(GRIDFILE);
                 gcode->stream->printf("%s deleted\n", GRIDFILE);
             } else {
+                __disable_irq();
                 save_grid(gcode->stream);
+                __enable_irq();
             }
 
             return true;
