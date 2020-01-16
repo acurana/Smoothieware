@@ -671,7 +671,7 @@ void SimpleShell::version_command( string parameters, StreamOutput *stream)
     #endif
     stream->printf("%d axis\n", MAX_ROBOT_ACTUATORS);
     if(!(dev & 0x00100000)) {
-        stream->printf("WARNING: This is not a sanctioned board and may be unreliable and even dangerous.\nThis MCU is deprecated, and cannot guarantee proper function\n");
+        stream->printf("NOTICE: This MCU is deprecated, and cannot guarantee proper function\n");
         THEKERNEL->set_bad_mcu(true);
     }else{
         THEKERNEL->set_bad_mcu(false);
@@ -1334,7 +1334,6 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("reset - reset smoothie\r\n");
     stream->printf("dfu - enter dfu boot loader\r\n");
     stream->printf("break - break into debugger\r\n");
-    stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
     stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
     stream->printf("get [pos|wcs|state|status|fk|ik]\r\n");
     stream->printf("get temp [bed|hotend]\r\n");
