@@ -316,13 +316,13 @@ alpha_max                                    0                # this gets loaded
 beta_min_endstop                             2.0m.4.6         # multiplexed on fabbster
 beta_max_endstop                             nc               #
 beta_homing_direction                        home_to_min      #
-beta_min                                     -51.0            #
+beta_min                                     -3               #
 beta_max                                     0                #
 gamma_min_endstop                            nc               #
 gamma_max_endstop                            2.0m.4.7         # multiplexed on fabbster
 gamma_homing_direction                       home_to_max      #
 gamma_min                                    0                #
-gamma_max                                    205              #
+gamma_max                                    210.8            #
 
 alpha_max_travel                             500              # max travel in mm for alpha/X axis when homing
 beta_max_travel                              500              # max travel in mm for beta/Y axis when homing
@@ -370,18 +370,37 @@ zprobe.slow_feedrate                         1                # was 5, mm/sec pr
 #zprobe.debounce_count                       100               # set if noisy
 zprobe.debounce_ms                           5                # needed for fabbster
 zprobe.fast_feedrate                         100              # move feedrate mm/sec
-zprobe.probe_height                          10               # how much above bed to start probe
+zprobe.probe_height                          5                # how much above bed to start probe
 #gamma_min_endstop                            nc               # normally 1.28. Change to nc to prevent conflict,
 
 # associated with zprobe the leveling strategy to use
-leveling-strategy.three-point-leveling.enable        true        # a leveling strategy that probes three points to define a plane and keeps the Z parallel to that plane
-leveling-strategy.three-point-leveling.point1        110.0,50.0  # the first probe point (x,y) optional may be defined with M557
-leveling-strategy.three-point-leveling.point2        50.0,150.0  # the second probe point (x,y)
-leveling-strategy.three-point-leveling.point3        170.0,150.0 # the third probe point (x,y)
-leveling-strategy.three-point-leveling.home_first    false       # home the XY axis before probing
+#leveling-strategy.three-point-leveling.enable        true        # a leveling strategy that probes three points to define a plane and keeps the Z parallel to that plane
+#leveling-strategy.three-point-leveling.point1        110.0,50.0  # the first probe point (x,y) optional may be defined with M557
+#leveling-strategy.three-point-leveling.point2        50.0,150.0  # the second probe point (x,y)
+#leveling-strategy.three-point-leveling.point3        170.0,150.0 # the third probe point (x,y)
+#leveling-strategy.three-point-leveling.home_first    false       # home the XY axis before probing
 #leveling-strategy.three-point-leveling.tolerance     0.03        # the probe tolerance in mm, anything less that this will be ignored, default is 0.03mm
-leveling-strategy.three-point-leveling.probe_offsets -28.0,-25.0,0   # the probe offsets from nozzle, must be x,y,z, default is no offset
-leveling-strategy.three-point-leveling.save_plane    true        # set to true to allow the bed plane to be saved with M500 default is false
+#leveling-strategy.three-point-leveling.probe_offsets -28.0,-25.0,0   # the probe offsets from nozzle, must be x,y,z, default is no offset
+#leveling-strategy.three-point-leveling.save_plane    true        # set to true to allow the bed plane to be saved with M500 default is false
+
+leveling-strategy.rectangular-grid.enable    true
+
+leveling-strategy.rectangular-grid.x_size    180
+leveling-strategy.rectangular-grid.y_size    180
+
+leveling-strategy.rectangular-grid.size      7
+
+leveling-strategy.rectangular-grid.do_home   false
+
+leveling-strategy.rectangular-grid.probe_offsets -28.0,-25.0,0  # probe offsets x,y,z  (Z should always be 0)
+
+leveling-strategy.rectangular-grid.save        true
+leveling-strategy.rectangular-grid.initial_height  10 # move to Z10 before first probe.
+
+leveling-strategy.rectangular-grid.dampening_start  0.5 # algorithm will be applied less and less from this height onwards
+leveling-strategy.rectangular-grid.height_limit     1   # algorithm will stop applying compensation from this point onwards
+
+mm_per_line_segment 1 # necessary for cartesians using rectangular-grid
 
 ## Panel
 panel.enable                                 true             # set to true to enable the panel code
