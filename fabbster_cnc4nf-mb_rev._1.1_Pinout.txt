@@ -31,9 +31,9 @@ U10.4               P9.3                      -                 dto.
 U10.5               P9.2                      -                 dto.
 U10.6               P9.1                      -                 dto.
 P2.10               P4                        ISP               via 100R to processor pin   
-todo                    P3          *****
-todo                    P2          *****
-todo                    P1          *****
+P0.22               P3                        -                 via 100R
+P0.21               P2                        -                 via 100R
+P0.20               P1                        -                 via 100R
 U3.4                Q1                        -                 multiplexed output, 74HC595 
 U3.5                Q3                        -                 dto.
 U3.6                Q5                        -                 dto.
