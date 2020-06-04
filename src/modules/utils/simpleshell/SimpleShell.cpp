@@ -769,12 +769,12 @@ void SimpleShell::grblDP_command( string parameters, StreamOutput *stream)
         THEROBOT->from_millimeters(std::get<2>(v[n+1])));
 
     if(verbose) {
-        stream->printf("[Tool Offset:%1.4f,%1.4f,%1.4f]\n",
+        stream->printf("[TLO:%1.4f,%1.4f,%1.4f]\n",
             THEROBOT->from_millimeters(std::get<0>(v[n+2])),
             THEROBOT->from_millimeters(std::get<1>(v[n+2])),
             THEROBOT->from_millimeters(std::get<2>(v[n+2])));
     }else{
-        stream->printf("[TL0:%1.4f]\n", THEROBOT->from_millimeters(std::get<2>(v[n+2])));
+        stream->printf("[TLO:%1.4f]\n", THEROBOT->from_millimeters(std::get<2>(v[n+2])));
     }
 
     // this is the last probe position, updated when a probe completes, also stores the number of steps moved after a homing cycle
@@ -877,8 +877,8 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
 
     } else if (what == "state") {
         // also $G and $I
-        // [G0 G54 G17 G21 G90 G94 M0 M5 M9 T0 F0.]
-        stream->printf("[G%d %s G%d G%d G%d G94 M0 M%c M%c T%d F%1.4f S%1.4f]\n",
+        // [GC:G0 G54 G17 G21 G90 G94 M0 M5 M9 T0 F0.]
+        stream->printf("[GC:G%d %s G%d G%d G%d G94 M0 M%c M%c T%d F%1.4f S%1.4f]\n",
             THEKERNEL->gcode_dispatch->get_modal_command(),
             wcs2gcode(THEROBOT->get_current_wcs()).c_str(),
             THEROBOT->plane_axis_0 == X_AXIS && THEROBOT->plane_axis_1 == Y_AXIS && THEROBOT->plane_axis_2 == Z_AXIS ? 17 :
@@ -1156,8 +1156,8 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
          }
         stream->printf("done\n");
 
-    }else if (what == "raw") {
-        // issues raw steps to the specified axis usage: axis steps steps/sec
+    }else if (what == "raw" || what == "acc") {
+        // issues raw steps (or actuator units) to the specified axis usage: axis steps steps/sec
         string axis = shift_parameter( parameters );
         string stepstr = shift_parameter( parameters );
         string stepspersec = shift_parameter( parameters );
@@ -1169,7 +1169,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
         char ax= toupper(axis[0]);
         uint8_t a= ax >= 'X' ? ax - 'X' : ax - 'A' + 3;
         int steps= strtol(stepstr.c_str(), NULL, 10);
-        bool dir= steps >= 0;
+        bool dir= steps <= 0;
         steps= std::abs(steps);
 
         if(a > C_AXIS) {
@@ -1183,6 +1183,13 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
         }
 
         uint32_t sps= strtol(stepspersec.c_str(), NULL, 10);
+
+        if(what == "acc") {
+            // convert actuator units to steps
+            steps= lroundf(THEROBOT->actuators[a]->get_steps_per_mm() * steps);
+            // convert steps per unit to steps/sec
+            sps= lroundf(THEROBOT->actuators[a]->get_steps_per_mm() * sps);
+        }
         sps= std::max(sps, 1UL);
 
         uint32_t delayus= 1000000.0F / sps;
@@ -1199,7 +1206,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
         //stream->printf("done\n");
 
     }else if (what == "pulse") {
-        // issues a step pulse then wqiats then unsteps, for testing when stepper moves
+        // issues a step pulse then waits then unsteps, for testing when stepper moves
         string axis = shift_parameter( parameters );
         string reps = shift_parameter( parameters );
         if(axis.empty()) {
@@ -1247,6 +1254,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
         stream->printf(" test square size iterations [feedrate]\n");
         stream->printf(" test circle radius iterations [feedrate]\n");
         stream->printf(" test raw axis steps steps/sec\n");
+        stream->printf(" test acc axis units units/sec\n");
         stream->printf(" test pulse axis iterations\n");
     }
 }
@@ -1297,7 +1305,7 @@ void SimpleShell::test_fabbster_command( string parameters, StreamOutput *stream
 
 void SimpleShell::jog(string parameters, StreamOutput *stream)
 {
-    // $J X0.1 [Y0.2] [F0.5]
+    // $J X0.1 [Y0.2] [S0.5]
     int n_motors= THEROBOT->get_number_registered_motors();
 
     // get axis to move and amount (X0.1)
@@ -1313,7 +1321,7 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
     // $J is first parameter
     shift_parameter(parameters);
     if(parameters.empty()) {
-        stream->printf("usage: $J X0.01 [F0.5] - axis can be XYZABC, optional speed is scale of max_rate\n");
+        stream->printf("usage: $J X0.01 [S0.5] - axis can be XYZABC, optional speed is scale of max_rate\n");
         return;
     }
 
@@ -1321,7 +1329,7 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         string p= shift_parameter(parameters);
 
         char ax= toupper(p[0]);
-        if(ax == 'F') {
+        if(ax == 'S') {
             // get speed scale
             scale= strtof(p.substr(1).c_str(), NULL);
             continue;
@@ -1351,7 +1359,7 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
             }else{
                 rate_mm_s = std::min(rate_mm_s, THEROBOT->actuators[i]->get_max_rate());
             }
-            //hstream->printf("%d %f F%f\n", i, delta[i], rate_mm_s);
+            //stream->printf("%d %f S%f\n", i, delta[i], rate_mm_s);
         }
     }
     if(!ok) {

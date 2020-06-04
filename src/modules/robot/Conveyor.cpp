@@ -87,6 +87,7 @@ void Conveyor::start(uint8_t n)
 void Conveyor::on_halt(void* argument)
 {
     if(argument == nullptr) {
+        // marks queue to be flushed next time get_next_block() is called
         flush_queue();
     }
 }
@@ -170,6 +171,8 @@ void Conveyor::queue_head_block()
 
     // not sure if this is the correct place but we need to turn on the motors if they were not already on
     THEKERNEL->call_event(ON_ENABLE, (void*)1); // turn all enable pins on
+    // we may have enough to start the queue now
+    check_queue();
 }
 
 void Conveyor::check_queue(bool force)
@@ -199,6 +202,7 @@ bool Conveyor::get_next_block(Block **block)
         while (queue.isr_tail_i != queue.head_i) {
             queue.isr_tail_i = queue.next(queue.isr_tail_i);
         }
+        flush = false;
     }
 
     // default the feerate to zero if there is no block available
@@ -244,11 +248,6 @@ void Conveyor::flush_queue()
     flush= true;
 
     // TODO force deceleration of last block
-
-    // now wait until the block queue has been flushed
-    wait_for_idle(false);
-
-    flush= false;
 }
 
 // Debug function
