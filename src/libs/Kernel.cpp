@@ -23,6 +23,7 @@
 #include "modules/robot/Planner.h"
 #include "modules/robot/Robot.h"
 #include "modules/robot/Conveyor.h"
+#include "modules/utils/multiplexer/MpxContainer.h"
 #include "StepperMotor.h"
 #include "BaseSolution.h"
 #include "EndstopsPublicAccess.h"
@@ -162,6 +163,11 @@ Kernel::Kernel()
     // Configure the step ticker
     this->step_ticker->set_frequency( this->base_stepping_frequency );
     this->step_ticker->set_unstep_time( microseconds_per_step_pulse );
+
+    // multiplexers need to be added before any modules using multiplexed pins
+    #ifndef NO_UTILS_MULTIPLEXERS
+    add_module( new MpxContainer() );
+    #endif
 
     // Core modules
     this->add_module( this->conveyor       = new Conveyor()      );

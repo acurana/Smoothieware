@@ -92,13 +92,16 @@ GPIO leds[5] = {
 
 void init() {
 
-    // Default pins to low status
-    for (int i = 0; i < 5; i++){
-        leds[i].output();
-        leds[i]= 0;
-    }
-
     Kernel* kernel = new Kernel();
+
+    // do this after config load
+    // Default pins to low status, only if leds are used
+    if(THEKERNEL->is_using_leds()) {
+        for (int i = 0; i < 5; i++){
+            leds[i].output();
+            leds[i]= 0;
+        }
+    }
 
     kernel->streams->printf("Smoothie Running @%ldMHz\r\n", SystemCoreClock / 1000000);
     SimpleShell::version_command("", kernel->streams);
