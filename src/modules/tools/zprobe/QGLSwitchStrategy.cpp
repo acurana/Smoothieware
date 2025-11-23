@@ -1,16 +1,14 @@
 /*
-    Author: Jim Morris (wolfmanjm@gmail.com)
-            modified for Voron by Christopher Lang
+    Based on ThreePointStrategy by Jim Morris (wolfmanjm@gmail.com)
+    QGL code for Voron by Christopher Lang (christopher.lang@acurana.de)
     License: GPL3 or better see <http://www.gnu.org/licenses/>
-
-
-@todo: adjust text for Voron 2 QGL
-
 
     Summary
     -------
-    Probes three user specified points on the bed and determines the plane of the bed relative to the probe.
-    as the head moves in X and Y it will adjust Z to keep the head tram with the bed.
+    Probes four user specified points on the bed and determines how much each of
+    the four Z steppers need to be adjusted to lie exactly in one plane.
+
+    Inspired by the QGL code from Klipper.
 
 // calculate straight line functions for levels measured and then move all
 // motors into same position
@@ -32,8 +30,7 @@
 //# Z stepper0 ----> O                             O <---- Z stepper3
 
 
-//##  Gantry Corners for 300mm Build
-//##  Uncomment for 300mm build
+//##  Gantry Corners for Voron 300mm Build
 //#gantry_corners:
 //#   -60,-10
 //#   360,370
@@ -46,42 +43,64 @@
 
     Configuration
     -------------
-    The strategy must be enabled in the cofnig as well as zprobe.
+    The strategy must be enabled in the config as well as zprobe.
 
-    leveling-strategy.three-point-leveling.enable         true
+    leveling-strategy.quad-gantry-leveling.enable         true
 
-    Three probe points must be defined, these are best if they are the three points of an equilateral triangle, as far apart as possible.
-    They can be defined in the config file as:-
+    Four probe points must be defined, these are best if they are the four points of a square, as far apart as possible.
+    They can be defined in the config file as:
 
-    leveling-strategy.three-point-leveling.point1         100.0,0.0   # the first probe point (x,y)
-    leveling-strategy.three-point-leveling.point2         200.0,200.0 # the second probe point (x,y)
-    leveling-strategy.three-point-leveling.point3         0.0,200.0   # the third probe point (x,y)
+    leveling-strategy.quad-gantry-leveling.point1         50.0,25.0   # the first probe point (x,y)
+    leveling-strategy.quad-gantry-leveling.point2         50.0,225.0  # the second probe point (x,y)
+    leveling-strategy.quad-gantry-leveling.point3         250.0,225.0 # the third probe point (x,y)
+    leveling-strategy.quad-gantry-leveling.point4         250.0,25.0  # the fourth probe point (x,y)
 
-    or they may be defined (and saved with M500) using M557 P0 X30 Y40.5  where P is 0,1,2
+    or they may be defined (and saved with M500) using M557 P0 X30 Y40.5  where P is 0,1,2,3
 
-    probe offsets from the nozzle or tool head can be defined with
+    The gantry corners need to be defined as:
 
-    leveling-strategy.three-point-leveling.probe_offsets  0,0,0  # probe offsetrs x,y,z
+    leveling-strategy.quad-gantry-leveling.gantry_corner0 -60.0,4.5   # the gantry corner for probe point 0, used for QGL calculation
+    leveling-strategy.quad-gantry-leveling.gantry_corner2 360.0,375.5 # the gantry corner for probe point 2, used for QGL
 
-    they may also be set with M565 X0 Y0 Z0
+    These values are for a 300mm Voron 2.2, adjust for your Voron.
+
+    Probe offsets from the nozzle or tool head can be defined with
+
+    leveling-strategy.quad-gantry-leveling.probe_offsets  0,0,0  # probe offsets x,y,z
+
+    They may also be set with M565 X0 Y0 Z0
 
     To force homing in X and Y before G32 does the probe the following can be set in config, this is the default
 
-    leveling-strategy.three-point-leveling.home_first    true   # disable by setting to false
+    leveling-strategy.quad-gantry-leveling.home_first    true   # disable by setting to false
 
     The probe tolerance can be set using the config line
 
-    leveling-strategy.three-point-leveling.tolerance   0.03    # the probe tolerance in mm, default is 0.03mm
+    leveling-strategy.quad-gantry-leveling.tolerance   0.03    # the probe tolerance in mm, default is 0.03mm
 
+    This QGL code assumes that the Z axis is driven by one step signal but that a switch (from the Switch module)
+    is used to disable each of the steppers. This allows for independent adjustment of each motor.
+
+    There is an example on how to use the Switch module to disable a motor in the
+    Smoothieware documentation (->Switch Module). When using Open-Drain wiring, you need to add “o!” to your pin numbers.
+    http://smoothieware.org/switch#homing-a-multi-motor-axis
+
+    leveling-strategy.quad-gantry-leveling.max_adjust     10      # max. adjustment in mm for QGL before failing
+    leveling-strategy.quad-gantry-leveling.repetitions    3       # number of distance measurements per point
+    leveling-strategy.quad-gantry-leveling.switch_z       z-0     # the switch that is used to enable / disable the STEP pin of the motor
+    leveling-strategy.quad-gantry-leveling.switch_z1      z-1
+    leveling-strategy.quad-gantry-leveling.switch_z2      z-2
+    leveling-strategy.quad-gantry-leveling.switch_z3      z-3
+
+    There is a config sample in the ConfigSamples/Snippets directory.
 
     Usage
     -----
-    G29 probes the three probe points and reports the Z at each point, if a plane is active it will be used to level the probe.
-    G32 probes the three probe points and defines the bed plane, this will remain in effect until reset or M561
+    G29 probes the four probe points and reports the Z at each point, if a plane is active it will be used to level the probe
+    G32 probes the four probe points and adjusts the Z steppers, this will remain in effect until reset or motors are switched off
     G31 reports the status
 
     M557 defines the probe points
-    M561 clears the plane and the bed leveling is disabled until G32 is run again
     M565 defines the probe offsets from the nozzle or tool head
 
     M500 saves the probe points and the probe offsets
